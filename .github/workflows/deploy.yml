@@ -13,4 +13,4 @@ jobs:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_TRIM_29B2C }}'
           projectId: trim-29b2c
-          channelId: live
+          channelId: live 
