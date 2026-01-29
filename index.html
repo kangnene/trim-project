@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trim</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <style>
+        body { height: 100vh; overflow: hidden; background-color: #f1f3f5; }
+        .page { display: none; height: calc(100vh - 56px); overflow: hidden; }
+        .page.active { display: block; }
+        .navbar { background: #212529 !important; border-bottom: 2px solid #343a40 !important; }
+        .navbar-brand { color: #ffffff !important; }
+        .filter-bar { background: #ffffff !important; border-bottom: 1px solid #dee2e6; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .table { font-size: 0.75rem !important; }
+        #ytTable td { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .selected-row { background-color: #e9ecef !important; font-weight: bold; }
+        #detailPanel { transition: width 0.3s ease; width: 0; overflow-x: hidden; background: #fff; z-index: 1000; }
+        #detailPanel.open { width: 450px; border-left: 1px solid #dee2e6; }
+        #detailPanel.expanded { width: 100% !important; }
+        .thumb-preview { position: fixed; z-index: 9999; pointer-events: none; display: none; max-width: 320px; border: 2px solid #fff; }
+        .tag-badge { cursor: pointer; text-decoration: underline; color: #0d6efd; }
+        .search-label { font-weight: bold; font-size: 10px; color: #6c757d; display: block; text-transform: uppercase; }
+        .avatar-btn { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 1px solid #ddd; }
+        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        .cursor-pointer { cursor: pointer; }
+        .badge .remove-btn { margin-left: 8px; padding: 0 4px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: background 0.2s; }
+        .badge .remove-btn:hover { background: #ff4757; color: white; }
+    </style>
+</head>
+<body>
+
+    <div id="loginOverlay">
+        <h2 class="fw-bold mb-4">Trim - YouTube Analyzer</h2>
+        <p class="text-muted mb-4">서비스 이용을 위해 구글 로그인이 필요합니다.</p>
+        <button class="btn btn-dark btn-lg px-5 shadow" onclick="login()">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" class="me-2"> 구글로 시작하기
+        </button>
+    </div>
+
+    <img id="hoverPreview" class="thumb-preview rounded shadow" src="">
+
+    <nav class="navbar navbar-expand-lg py-1 shadow-sm">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center">
+                <a class="navbar-brand fw-bold me-2" href="#" onclick="showPage('analyzerPage')">TRIM</a>
+                <div id="adminBtnArea"></div>
+            </div>
+            
+            <div id="navControls" class="d-flex align-items-center gap-2 flex-grow-1 d-none">
+                <div class="me-auto"></div> 
+                <div class="dropdown">
+                    <img id="userAvatar" class="avatar-btn dropdown-toggle" data-bs-toggle="dropdown" src="">
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0" id="userMenu">
+                        <li><h6 class="dropdown-header" id="userEmailDisplay">이메일</h6></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="showPage('profilePage')">내 계정 관리</a></li>
+                        <li><a class="dropdown-item text-danger" href="#" onclick="logout()">로그아웃</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div id="analyzerPage" class="page active">
+        <div class="filter-bar p-2 px-3 d-flex align-items-center gap-3 flex-wrap">
+            <div>
+                <label class="search-label">MIN VIEWS</label>
+                <input type="number" id="minViews" class="form-control form-control-sm fw-bold text-center" style="width:90px;" value="30000">
+            </div>
+            <div>
+                <label class="search-label">PERIOD</label>
+                <select id="monthsAgo" class="form-select form-select-sm">
+                    <option value="all">전체</option>
+                    <option value="1">1개월</option>
+                    <option value="6" selected>6개월</option>
+                    <option value="12">1년</option>
+                </select>
+            </div>
+            <div>
+                <label class="search-label">TYPE</label>
+                <select id="videoType" class="form-select form-select-sm" onchange="toggleTypeDetail()">
+                    <option value="any">전체</option>
+                    <option value="long_form" selected>롱폼(3분~)</option>
+                    <option value="short_form">쇼츠</option>
+                </select>
+            </div>
+            <div id="typeDetailContainer">
+                <label class="search-label">MAX DURATION (분 이하)</label>
+                <div class="input-group input-group-sm">
+                    <input type="number" id="durationMax" class="form-control" style="width:60px;" value="20">
+                    <span class="input-group-text">분 이하</span>
+                </div>
+            </div>
+            <div class="ms-auto d-flex align-items-center gap-2">
+                <input type="text" id="query" class="form-control form-control-sm bg-light" placeholder="검색어 입력" style="width: 200px;">
+                <button id="searchBtn" class="btn btn-dark btn-sm px-4 fw-bold">분석 시작</button>
+            </div>
+        </div>
+
+        <div class="d-flex h-100 overflow-hidden">
+            <div class="flex-grow-1 overflow-auto p-3">
+                <table id="ytTable" class="table table-hover table-sm align-middle w-100">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th><th>썸네일</th><th>영상제목</th><th>날짜</th><th>시간</th><th class="text-end">조회수</th><th class="text-end">좋아요</th><th class="text-end">댓글</th><th>카테고리</th><th>채널명</th><th class="text-end">구독자</th><th>태그</th><th>설명</th><th>링크</th><th>길이</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultBody"></tbody>
+                </table>
+                <div id="status" class="py-3 text-center text-muted">검색어를 입력하고 분석을 시작하세요.</div>
+            </div>
+
+            <div id="detailPanel" class="shadow-lg d-flex flex-column">
+                <div class="p-4 w-100 d-flex flex-column h-100" style="overflow-y: auto;">
+                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                        <h5 class="fw-bold mb-0">Video Details</h5>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-dark" onclick="toggleExpand()" id="expBtn">전체화면</button>
+                            <button class="btn-close ms-2" onclick="closeDetail()"></button>
+                        </div>
+                    </div>
+                    <div id="detailContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="profilePage" class="page container mt-5" style="max-width: 600px;">
+        <div class="card shadow-sm border-0 p-4">
+            <h4 class="fw-bold mb-4">내 계정 관리</h4>
+            <div class="mb-4">
+                <label class="form-label text-muted small">현재 로그인 계정 (변경 불가)</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="16"></span>
+                    <input type="text" id="profileEmail" class="form-control bg-light" readonly>
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="form-label fw-bold">YouTube Data API Key</label>
+                <div class="input-group mb-2">
+                    <input type="password" id="userApiKey" class="form-control" placeholder="API 키를 입력하세요">
+                    <button class="btn btn-outline-dark" onclick="window.open('https://console.cloud.google.com/apis/credentials')">키 발급소</button>
+                </div>
+                <div id="apiKeyStatus" class="form-text text-danger">⚠️ 분석 기능을 사용하려면 키가 필요합니다.</div>
+            </div>
+            <button id="saveBtn" class="btn btn-dark w-100 fw-bold py-2 mb-4" onclick="saveUserData()">설정 저장하기</button>
+            <hr>
+            <button class="btn btn-outline-danger btn-sm" onclick="deleteMyAccount()">계정 탈퇴</button>
+        </div>
+    </div>
+
+    <div id="adminPage" class="container mt-4 page overflow-auto">
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3">
+                <div class="card bg-primary text-white border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <h6 class="text-uppercase mb-2" style="font-size: 0.8rem; opacity: 0.8;">총 가입자 수</h6>
+                        <h2 class="display-6 fw-bold mb-0" id="totalUserCount">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card bg-success text-white border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <h6 class="text-uppercase mb-2" style="font-size: 0.8rem; opacity: 0.8;">누적 검색 건수</h6>
+                        <h2 class="display-6 fw-bold mb-0" id="totalSearchCount">0</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="card-title fw-bold mb-0">🔑 관리자 권한 설정</h5>
+            </div>
+            <div class="card-body">
+                <div class="input-group mb-3" style="max-width: 500px;">
+                    <input type="email" id="newAdminEmail" class="form-control" placeholder="이메일 입력">
+                    <button class="btn btn-primary" onclick="addAdmin()">관리자 추가</button>
+                </div>
+                <div id="adminBadgeList" class="d-flex flex-wrap gap-2"></div>
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3"><h5 class="fw-bold mb-0">👥 가입자 명단</h5></div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light"><tr><th class="px-4">이메일</th><th>설문</th><th>가입일</th></tr></thead>
+                    <tbody id="adminUserList"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="tagModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">태그</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><textarea id="tagArea" class="form-control" rows="10" readonly></textarea></div></div></div></div>
+    <div class="modal fade" id="surveyModal" data-bs-backdrop="static" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body p-5 text-center"><h3>환영합니다!</h3><div class="d-grid gap-2 mt-4"><button class="btn btn-outline-dark py-3" onclick="submitSurvey('유튜브 크리에이터')">유튜브 크리에이터</button><button class="btn btn-outline-dark py-3" onclick="submitSurvey('마케팅/대행사')">마케팅/대행사</button><button class="btn btn-outline-dark py-3" onclick="submitSurvey('기타')">기타</button></div></div></div></div></div>
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAv4QyHd-Gxv59DMBL2RvEJJ4fmmhcP-H4",
+            authDomain: "trim-29b2c.firebaseapp.com",
+            projectId: "trim-29b2c",
+            storageBucket: "trim-29b2c.firebasestorage.app",
+            messagingSenderId: "96358882959",
+            appId: "1:96358882959:web:736c6dc63a19de94031afa",
+            measurementId: "G-Z4VSQ6SYQN"
+        }; 
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let dataTable, currentUser, savedApiKey = "";
+        const CATEGORY_MAP = {'1':'영화/애니','2':'자동차','10':'음악','15':'동물','17':'스포츠','19':'여행','20':'게임','22':'일상','23':'코미디','24':'엔터','25':'뉴스','26':'노하우','27':'교육','28':'과학','29':'사회'};
+
+        window.login = () => signInWithPopup(auth, provider).catch(e => alert(e.message));
+        window.logout = () => signOut(auth).then(() => location.reload());
+
+        window.showPage = (id, saveHistory = true) => {
+            $('.page').removeClass('active').hide();
+            $('#' + id).addClass('active').show();
+            if(id === 'analyzerPage') window.closeDetail();
+
+            // 주소창 뒤에 #id를 붙여 브라우저에 기록을 남깁니다.
+            if (saveHistory) {
+                history.pushState({ pageId: id }, null, "#" + id);
+            }
+        };
+        // 관리자 기능
+        window.loadAdmin = async () => {
+            // 1. 먼저 페이지를 보여주고 기록을 남깁니다.
+            window.showPage('adminPage', true); 
+            
+            try {
+                // 2. 그 다음 데이터를 불러옵니다.
+                const [uSnap, sSnap, aSnap] = await Promise.all([
+                    getDocs(collection(db, "users")),
+                    getDocs(collection(db, "searchLogs")),
+                    getDocs(collection(db, "admins"))
+                ]);
+                
+                $('#totalUserCount').text(uSnap.size);
+                $('#totalSearchCount').text(sSnap.size);
+
+                let uHtml = "";
+                uSnap.forEach(d => {
+                    const data = d.data();
+                    uHtml += `<tr><td class="px-4">${data.email}</td><td>${data.survey||'-'}</td><td>${data.joinedAt?.toDate().toLocaleDateString()||'-'}</td></tr>`;
+                });
+                $('#adminUserList').html(uHtml);
+
+                let aHtml = "";
+                aSnap.forEach(d => {
+                    aHtml += `<div class="badge bg-dark p-2 d-flex align-items-center"><span>${d.id}</span><span class="remove-btn cursor-pointer ms-2" onclick="removeAdmin('${d.id}')">✕</span></div>`;
+                });
+                $('#adminBadgeList').html(aHtml);
+                
+            } catch (e) { 
+                console.error("Admin Load Error:", e);
+                alert("권한이 없거나 오류가 발생했습니다."); 
+                window.showPage('analyzerPage', false); 
+            }
+        };
+
+        window.addAdmin = async () => {
+            const email = $('#newAdminEmail').val().trim().toLowerCase();
+            if(!email) return;
+            await setDoc(doc(db, "admins", email), { addedAt: serverTimestamp() });
+            $('#newAdminEmail').val(''); loadAdmin();
+        };
+
+        window.removeAdmin = async (email) => {
+            if(email === "kangdaxom@gmail.com") return alert("삭제 불가");
+            if(confirm('삭제하시겠습니까?')) { await deleteDoc(doc(db, "admins", email)); loadAdmin(); }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                $('#loginOverlay').hide();
+                $('#navControls').removeClass('d-none');
+                $('#userAvatar').attr('src', user.photoURL);
+                $('#userEmailDisplay').text(user.email);
+                $('#profileEmail').val(user.email);
+
+                // 1. 관리자 여부 체크 및 버튼 노출
+                const adminDoc = await getDoc(doc(db, "admins", user.email.toLowerCase()));
+                if (adminDoc.exists()) {
+                    // 상단 버튼 (로고 옆)
+                    $('#adminBtnArea').html(`<button class="btn btn-sm btn-warning fw-bold ms-2" onclick="loadAdmin()">🛠 대시보드</button>`);
+                    
+                    // 메뉴 내 버튼 (아바타 클릭 시)
+                    if($('#adminLink').length === 0) {
+                        // href="javascript:void(0)"를 넣어 페이지 이동을 막고 onclick만 실행되게 합니다.
+                        $('#userMenu').prepend(`<li><a id="adminLink" class="dropdown-item fw-bold text-primary" href="javascript:void(0)" onclick="loadAdmin()">🚀 관리자 대시보드</a></li>`);
+                    }
+                }
+
+                // 2. 유저 정보 확인
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (!userDoc.exists()) {
+                    new bootstrap.Modal(document.getElementById('surveyModal')).show();
+                } else {
+                    savedApiKey = userDoc.data().apiKey || "";
+                    $('#userApiKey').val(savedApiKey);
+                    if(savedApiKey) $('#apiKeyStatus').html("<span class='text-success'>✅ API 키 등록됨</span>");
+                }
+            }
+        });
+
+        // 분석 로직
+        $('#searchBtn').click(async function() {
+            if (!savedApiKey) { alert("API KEY 등록 필요"); return showPage('profilePage'); }
+            const queryText = $('#query').val();
+            if (!queryText) return;
+            
+            try { await addDoc(collection(db, "searchLogs"), { user: currentUser.email, keyword: queryText, time: serverTimestamp() }); } catch(e) {}
+            
+            $('#status').html('분석 중...');
+            dataTable.clear().draw();
+
+            try {
+                const minV = parseInt($('#minViews').val()) || 0;
+                const typeFilter = $('#videoType').val();
+                const durMax = parseInt($('#durationMax').val()) || 20;
+                const months = $('#monthsAgo').val();
+                let dateParam = '';
+                if (months !== 'all') {
+                    const date = new Date(); date.setMonth(date.getMonth() - parseInt(months));
+                    dateParam = `&publishedAfter=${date.toISOString()}`;
+                }
+
+                let results = [];
+                let nextToken = '';
+                for(let i=0; i<5; i++){
+                    const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(queryText)}&type=video${dateParam}${nextToken ? '&pageToken='+nextToken : ''}&maxResults=50&order=viewCount&regionCode=KR&key=${savedApiKey}`);
+                    const data = await res.json();
+                    if(!data.items) break;
+
+                    const vIds = data.items.map(v => v.id.videoId).join(',');
+                    const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${vIds}&key=${savedApiKey}`);
+                    const vData = await vRes.json();
+                    
+                    const cIds = [...new Set(vData.items.map(v => v.snippet.channelId))].join(',');
+                    const cRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${cIds}&key=${savedApiKey}`);
+                    const cData = await cRes.json();
+                    const cMap = {}; cData.items.forEach(c => cMap[c.id] = c.statistics.subscriberCount);
+
+                    vData.items.forEach(v => {
+                        const views = parseInt(v.statistics.viewCount);
+                        const sec = parseDurationToSec(v.contentDetails.duration);
+                        let pass = (views >= minV);
+                        if(typeFilter === 'long_form') pass = pass && (sec >= 180 && sec <= durMax*60);
+                        if(typeFilter === 'short_form') pass = pass && (sec < 60);
+                        if(pass && results.length < 30) {
+                            const s = v.snippet; const t = v.statistics;
+                            const hr = s.thumbnails.maxres ? s.thumbnails.maxres.url : s.thumbnails.medium.url;
+                            results.push([ results.length+1, `<img src="${s.thumbnails.default.url}" data-highres="${hr}" class="thumb-img rounded" style="width:50px;">`, s.title, new Date(s.publishedAt).toLocaleDateString(), new Date(s.publishedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), views.toLocaleString(), parseInt(t.likeCount||0).toLocaleString(), parseInt(t.commentCount||0).toLocaleString(), CATEGORY_MAP[s.categoryId]||'기타', s.channelTitle, cMap[s.channelId]?parseInt(cMap[s.channelId]).toLocaleString():'비공개', `<span class="tag-badge" onclick="openTagModal('${s.tags?.join(',') || ''}')">태그</span>`, s.description, `<a href="https://youtu.be/${v.id}" target="_blank">Link</a>`, formatDuration(v.contentDetails.duration) ]);
+                        }
+                    });
+                    nextToken = data.nextPageToken;
+                    if(!nextToken || results.length >= 30) break;
+                }
+                dataTable.rows.add(results).draw();
+                $('#status').text(`분석 완료: ${results.length}건`);
+            } catch(e) { $('#status').text("오류 발생"); }
+        });
+
+        window.saveUserData = async () => {
+            const key = $('#userApiKey').val();
+            await updateDoc(doc(db, "users", currentUser.uid), { apiKey: key });
+            savedApiKey = key; alert("저장 완료!"); showPage('analyzerPage');
+        };
+
+        window.submitSurvey = async (v) => {
+            await setDoc(doc(db, "users", currentUser.uid), { email: currentUser.email, survey: v, apiKey: "", joinedAt: serverTimestamp() });
+            bootstrap.Modal.getInstance(document.getElementById('surveyModal')).hide();
+        };
+
+        function parseDurationToSec(d) {
+            const m = d.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+            return (parseInt(m[1])||0)*3600 + (parseInt(m[2])||0)*60 + (parseInt(m[3])||0);
+        }
+
+        function formatDuration(d) {
+            const m = d.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+            return `${m[1]?m[1]+':':''}${(m[2]||'0').padStart(2,'0')}:${(m[3]||'0').padStart(2,'0')}`;
+        }
+
+        window.closeDetail = () => { $('#detailPanel').removeClass('open expanded'); $('#ytTable tbody tr').removeClass('selected-row'); };
+        window.toggleExpand = () => { $('#detailPanel').toggleClass('expanded'); $('#expBtn').text($('#detailPanel').hasClass('expanded') ? '축소' : '전체'); };
+        window.openTagModal = (s) => { $('#tagArea').val(s); new bootstrap.Modal(document.getElementById('tagModal')).show(); };
+        window.toggleTypeDetail = () => { document.getElementById('typeDetailContainer').style.visibility = ($('#videoType').val() === 'long_form') ? 'visible' : 'hidden'; };
+
+        $(document).ready(function() {
+            dataTable = $('#ytTable').DataTable({ paging: true, pageLength: 50, scrollX: true });
+            $(document).on('click', '#ytTable tbody tr', function(e) {
+                if($(e.target).closest('button, a, .tag-badge').length) return;
+                $('#ytTable tbody tr').removeClass('selected-row'); $(this).addClass('selected-row');
+                const rowData = dataTable.row(this).data();
+                if(rowData) {
+                    $('#detailContent').html(`<img src="${$(rowData[1]).data('highres')}" class="img-fluid rounded mb-3"><h5 class="fw-bold">${rowData[2]}</h5><div class="bg-light p-3 small border rounded" style="max-height:300px; overflow-y:auto; white-space:pre-wrap;">${rowData[12]}</div><a href="${$(rowData[13]).attr('href')}" target="_blank" class="btn btn-dark w-100 mt-3">영상 열기</a>`);
+                    $('#detailPanel').addClass('open');
+                }
+            });
+            $(document).on('mouseenter', '.thumb-img', function(e) { $('#hoverPreview').attr('src', $(this).data('highres')).show(); })
+            .on('mousemove', '.thumb-img', function(e) { $('#hoverPreview').css({ top: e.clientY + 15, left: e.clientX + 15 }); })
+            .on('mouseleave', '.thumb-img', function() { $('#hoverPreview').hide(); });
+        });
+
+        // 사용자가 마우스 뒤로가기/앞으로가기를 눌렀을 때 실행
+        window.onpopstate = function(event) {
+            if (event.state && event.state.pageId) {
+                // 기록에 저장된 페이지로 이동 (중복 기록 방지를 위해 false 사용)
+                window.showPage(event.state.pageId, false);
+            } else {
+                // 기록이 없으면 기본 페이지로
+                window.showPage('analyzerPage', false);
+            }
+        };
+
+        // 페이지 첫 접속 시 URL에 #이 있으면 해당 페이지를 바로 띄워줌
+        $(window).on('load', function() {
+            const hash = location.hash.replace('#', '');
+            if (hash && ['adminPage', 'profilePage', 'analyzerPage'].includes(hash)) {
+                setTimeout(() => window.showPage(hash, false), 500); // 로그인 대기용 0.5초 지연
+            } else {
+                // 첫 페이지 상태를 브라우저에 등록
+                history.replaceState({ pageId: 'analyzerPage' }, null, "#analyzerPage");
+            }
+        });
+    </script>
+</body>
+</html>
