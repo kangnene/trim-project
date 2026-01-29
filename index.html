@@ -7,36 +7,41 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <style>
+        /* 전체 레이아웃 (부트스트랩만으론 한계가 있음) */
         body { height: 100vh; overflow: hidden; background-color: #f1f3f5; }
         .page { display: none; height: calc(100vh - 56px); overflow: hidden; }
         .page.active { display: block; }
-        .navbar { background: #212529 !important; border-bottom: 2px solid #343a40 !important; }
-        .navbar-brand { color: #ffffff !important; }
-        .filter-bar { background: #ffffff !important; border-bottom: 1px solid #dee2e6; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .table { font-size: 0.75rem !important; }
+
+        /* 테이블 텍스트 생략 (...) 처리 - 부트스트랩에 없는 기능 */
         #ytTable td { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .selected-row { background-color: #e9ecef !important; font-weight: bold; }
+
+        /* 상세 패널 슬라이드 애니메이션 및 너비 제어 */
         #detailPanel { transition: width 0.3s ease; width: 0; overflow-x: hidden; background: #fff; z-index: 1000; }
         #detailPanel.open { width: 450px; border-left: 1px solid #dee2e6; }
         #detailPanel.expanded { width: 100% !important; }
+
+        /* 썸네일 미리보기 (JavaScript 좌표 계산용) */
         .thumb-preview { position: fixed; z-index: 9999; pointer-events: none; display: none; max-width: 320px; border: 2px solid #fff; }
-        .tag-badge { cursor: pointer; text-decoration: underline; color: #0d6efd; }
-        .search-label { font-weight: bold; font-size: 10px; color: #6c757d; display: block; text-transform: uppercase; }
-        .avatar-btn { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 1px solid #ddd; }
-        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-        .cursor-pointer { cursor: pointer; }
-        .badge .remove-btn { margin-left: 8px; padding: 0 4px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: background 0.2s; }
-        .badge .remove-btn:hover { background: #ff4757; color: white; }
     </style>
 </head>
 <body>
 
-    <div id="loginOverlay">
-        <h2 class="fw-bold mb-4">Trim - YouTube Analyzer</h2>
-        <p class="text-muted mb-4">서비스 이용을 위해 구글 로그인이 필요합니다.</p>
-        <button class="btn btn-dark btn-lg px-5 shadow" onclick="login()">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" class="me-2"> 구글로 시작하기
-        </button>
+    <div class="modal fade" id="loginModal" data-bs-backdrop="static" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-body p-5 text-center">
+                    <h3 class="fw-bold mb-3">Trim - YouTube Analyzer</h3>
+                    <p class="text-muted mb-4">심층 분석 기능을 이용하시려면<br>구글 로그인이 필요합니다.</p>
+                    <div class="d-grid">
+                        <button class="btn btn-dark btn-lg py-3 shadow-sm" onclick="login()">
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" class="me-2"> 구글로 시작하기
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-link btn-sm mt-3 text-decoration-none text-muted" data-bs-dismiss="modal">둘러보기</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <img id="hoverPreview" class="thumb-preview rounded shadow" src="">
@@ -48,14 +53,21 @@
                 <div id="adminBtnArea"></div>
             </div>
             
-            <div id="navControls" class="d-flex align-items-center gap-2 flex-grow-1 d-none">
+            <div id="navControls" class="d-flex align-items-center gap-2 flex-grow-1">
                 <div class="me-auto"></div> 
-                <div class="dropdown">
+                
+                <div id="guestControls">
+                    <button class="btn btn-warning btn-sm px-3 fw-bold shadow-sm" onclick="new bootstrap.Modal(document.getElementById('loginModal')).show()">
+                        🚀 무료로 이용하기
+                    </button>
+                </div>
+
+                <div id="userControls" class="dropdown d-none">
                     <img id="userAvatar" class="avatar-btn dropdown-toggle" data-bs-toggle="dropdown" src="">
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0" id="userMenu">
                         <li><h6 class="dropdown-header" id="userEmailDisplay">이메일</h6></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" onclick="showPage('profilePage')">내 계정 관리</a></li>
+                        <li><a class="dropdown-item cursor-pointer" onclick="showPage('profilePage')">내 계정 관리</a></li>
                         <li><a class="dropdown-item text-danger" href="#" onclick="logout()">로그아웃</a></li>
                     </ul>
                 </div>
@@ -92,6 +104,9 @@
                     <input type="number" id="durationMax" class="form-control" style="width:60px;" value="20">
                     <span class="input-group-text">분 이하</span>
                 </div>
+            </div>
+            <div class="align-self-end">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetToCustomDefaults()" style="font-size: 10px; padding: 2px 8px;">기본값</button>
             </div>
             <div class="ms-auto d-flex align-items-center gap-2">
                 <input type="text" id="query" class="form-control form-control-sm bg-light" placeholder="검색어 입력" style="width: 200px;">
@@ -152,49 +167,97 @@
     </div>
 
     <div id="adminPage" class="container mt-4 page overflow-auto">
-        <div class="row mb-4">
-            <div class="col-md-6 mb-3">
-                <div class="card bg-primary text-white border-0 shadow-sm">
-                    <div class="card-body p-4">
-                        <h6 class="text-uppercase mb-2" style="font-size: 0.8rem; opacity: 0.8;">총 가입자 수</h6>
-                        <h2 class="display-6 fw-bold mb-0" id="totalUserCount">0</h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 mb-3">
-                <div class="card bg-success text-white border-0 shadow-sm">
-                    <div class="card-body p-4">
-                        <h6 class="text-uppercase mb-2" style="font-size: 0.8rem; opacity: 0.8;">누적 검색 건수</h6>
-                        <h2 class="display-6 fw-bold mb-0" id="totalSearchCount">0</h2>
-                    </div>
-                </div>
+    <div class="row mb-4 text-center">
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm py-3 bg-primary text-white">
+                <h6 class="mb-1 opacity-75 small">총 가입자</h6>
+                <h3 class="fw-bold mb-0" id="totalUserCount">0</h3>
             </div>
         </div>
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white py-3">
-                <h5 class="card-title fw-bold mb-0">🔑 관리자 권한 설정</h5>
-            </div>
-            <div class="card-body">
-                <div class="input-group mb-3" style="max-width: 500px;">
-                    <input type="email" id="newAdminEmail" class="form-control" placeholder="이메일 입력">
-                    <button class="btn btn-primary" onclick="addAdmin()">관리자 추가</button>
-                </div>
-                <div id="adminBadgeList" class="d-flex flex-wrap gap-2"></div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm py-3 bg-success text-white">
+                <h6 class="mb-1 opacity-75 small">누적 검색</h6>
+                <h3 class="fw-bold mb-0" id="totalSearchCount">0</h3>
             </div>
         </div>
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white py-3"><h5 class="fw-bold mb-0">👥 가입자 명단</h5></div>
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light"><tr><th class="px-4">이메일</th><th>설문</th><th>가입일</th></tr></thead>
-                    <tbody id="adminUserList"></tbody>
-                </table>
+        <div class="col-md-6 mb-3">
+            <div class="card border-0 shadow-sm py-3">
+                <h6 class="text-muted mb-1 small">평균 머무는 시간</h6>
+                <h3 class="fw-bold mb-0" id="avgSessionTime">12분 45초</h3>
             </div>
         </div>
     </div>
 
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3"><h6 class="fw-bold mb-0">🔥 인기 키워드 TOP 10 (최근 1개월)</h6></div>
+                <div class="card-body"><ul id="topKeywordList" class="list-group list-group-flush small"></ul></div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3"><h6 class="fw-bold mb-0">📈 유입 경로 분석</h6></div>
+                <div class="card-body" id="surveyStatList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3"><h5 class="fw-bold mb-0">👥 가입자 명단 관리</h5></div>
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="px-4">이메일</th>
+                        <th>유입 경로</th>
+                        <th>가입일</th>
+                        <th>평균 체류</th>
+                        <th>권한</th>
+                        <th class="text-end px-4">관리</th> 
+                    </tr>
+                </thead>
+                <tbody id="adminUserList"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0">🔍 최근 검색 기록</h5>
+        </div>
+        <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="px-4">사용자</th>
+                        <th>검색어</th>
+                        <th>일시</th>
+                    </tr>
+                </thead>
+                <tbody id="adminSearchList"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
     <div class="modal fade" id="tagModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">태그</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><textarea id="tagArea" class="form-control" rows="10" readonly></textarea></div></div></div></div>
-    <div class="modal fade" id="surveyModal" data-bs-backdrop="static" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body p-5 text-center"><h3>환영합니다!</h3><div class="d-grid gap-2 mt-4"><button class="btn btn-outline-dark py-3" onclick="submitSurvey('유튜브 크리에이터')">유튜브 크리에이터</button><button class="btn btn-outline-dark py-3" onclick="submitSurvey('마케팅/대행사')">마케팅/대행사</button><button class="btn btn-outline-dark py-3" onclick="submitSurvey('기타')">기타</button></div></div></div></div></div>
+    <div class="modal fade" id="surveyModal" data-bs-backdrop="static" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body p-5 text-center">
+                    <h3 class="fw-bold mb-4">어떻게 오셨나요?</h3>
+                    <p class="text-muted">서비스 개선을 위해 유입 경로를 선택해 주세요.</p>
+                    <div class="d-grid gap-2 mt-4">
+                        <button class="btn btn-outline-dark py-3" onclick="submitSurvey('유튜브 광고/영상')">유튜브 광고/영상</button>
+                        <button class="btn btn-outline-dark py-3" onclick="submitSurvey('네이버 블로그/카페')">네이버 블로그/카페</button>
+                        <button class="btn btn-outline-dark py-3" onclick="submitSurvey('지인 추천')">지인 추천</button>
+                        <button class="btn btn-outline-dark py-3" onclick="submitSurvey('기타', event)">기타 (직접 입력)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -204,7 +267,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, addDoc, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+            
 
         const firebaseConfig = {
             apiKey: "AIzaSyAv4QyHd-Gxv59DMBL2RvEJJ4fmmhcP-H4",
@@ -227,23 +291,25 @@
         window.login = () => signInWithPopup(auth, provider).catch(e => alert(e.message));
         window.logout = () => signOut(auth).then(() => location.reload());
 
+        // [수정] 페이지 전환 함수 보강
         window.showPage = (id, saveHistory = true) => {
-            $('.page').removeClass('active').hide();
-            $('#' + id).addClass('active').show();
-            if(id === 'analyzerPage') window.closeDetail();
+            $('.page').hide().removeClass('active'); 
+            $('#' + id).show().addClass('active');
 
-            // 주소창 뒤에 #id를 붙여 브라우저에 기록을 남깁니다.
+            if(id === 'analyzerPage') {
+                window.closeDetail();
+                if (dataTable) dataTable.columns.adjust();
+            }
+
             if (saveHistory) {
                 history.pushState({ pageId: id }, null, "#" + id);
             }
         };
-        // 관리자 기능
+
         window.loadAdmin = async () => {
-            // 1. 먼저 페이지를 보여주고 기록을 남깁니다.
             window.showPage('adminPage', true); 
-            
             try {
-                // 2. 그 다음 데이터를 불러옵니다.
+                // [수정] aSnap(admins 컬렉션)을 추가로 가져옵니다.
                 const [uSnap, sSnap, aSnap] = await Promise.all([
                     getDocs(collection(db, "users")),
                     getDocs(collection(db, "searchLogs")),
@@ -253,23 +319,181 @@
                 $('#totalUserCount').text(uSnap.size);
                 $('#totalSearchCount').text(sSnap.size);
 
+                // 관리자 이메일 목록을 Set으로 만들어 비교하기 쉽게 준비
+                const adminEmails = new Set();
+                aSnap.forEach(doc => adminEmails.add(doc.id.toLowerCase()));
+
+                // 1. 키워드 & 유입경로 분석 로직 (기존 유지)
+                const oneMonthAgo = new Date();
+                oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+                const keywordCounts = {};
+                const surveyCounts = {};
+
+                sSnap.forEach(d => {
+                    const data = d.data();
+                    if (data.time?.toDate() > oneMonthAgo) {
+                        const k = data.keyword || "미분류";
+                        keywordCounts[k] = (keywordCounts[k] || 0) + 1;
+                    }
+                });
+                uSnap.forEach(d => { 
+                    const s = d.data().survey || "미응답"; 
+                    surveyCounts[s] = (surveyCounts[s] || 0) + 1; 
+                });
+
+                const topK = Object.entries(keywordCounts).sort((a,b) => b[1]-a[1]).slice(0, 10);
+                $('#topKeywordList').html(topK.map(([k, v], i) => `
+                    <li class="list-group-item d-flex justify-content-between border-0 px-0">
+                        <span>${i+1}. ${k}</span><span class="badge bg-primary rounded-pill">${v}</span>
+                    </li>`).join('') || "데이터 없음");
+                
+                $('#surveyStatList').html(Object.entries(surveyCounts).map(([source, count]) => {
+                    let percent = Math.round((count / uSnap.size) * 100);
+                    return `<div class="mb-2 small">${source} (${percent}%)<div class="progress" style="height:5px;"><div class="progress-bar bg-success" style="width:${percent}%"></div></div></div>`;
+                }).join(''));
+
+                // 2. 가입자 명단 렌더링 (상태 판별 로직 추가)
                 let uHtml = "";
+                const now = new Date(); // 현재 시간 기준
+
                 uSnap.forEach(d => {
                     const data = d.data();
-                    uHtml += `<tr><td class="px-4">${data.email}</td><td>${data.survey||'-'}</td><td>${data.joinedAt?.toDate().toLocaleDateString()||'-'}</td></tr>`;
+                    const email = data.email.toLowerCase();
+                    const isWithdrawn = data.status === "withdrawn";
+                    const isAdmin = adminEmails.has(email);
+
+                    // [수정 부분] 온라인/오프라인 동그라미 색상 판별
+                    let dotColor = "#adb5bd"; // 기본 오프라인 (그레이)
+                    if (!isWithdrawn && data.lastActive) {
+                        const lastActive = data.lastActive.toDate();
+                        const diff = (now - lastActive) / 1000 / 60; 
+                        if (diff < 2) { 
+                            dotColor = "#198754"; // 온라인 (초록색)
+                        }
+                    }
+                    
+                    // 탈퇴자가 아닐 때만 동그라미 표시
+                    const statusDot = isWithdrawn ? "" : `<span style="display:inline-block; width:10px; height:10px; background-color:${dotColor}; border-radius:50%; margin-right:8px;"></span>`;
+
+                    // 수집된 데이터가 없으면 '분석 대기'로 표시
+                    const sessionTime = isWithdrawn ? "-" : (data.lastSessionTime || "분석 대기");
+
+                    // 권한 드롭다운 생성
+                    const roleSelect = `
+                        <select class="form-select form-select-sm fw-bold ${isAdmin ? 'text-primary border-primary' : 'text-secondary'}" 
+                                onchange="changeRole('${data.email}', this.value)" 
+                                ${isWithdrawn ? 'disabled' : ''}>
+                            <option value="user" ${!isAdmin ? 'selected' : ''}>일반</option>
+                            <option value="admin" ${isAdmin ? 'selected' : ''}>관리자</option>
+                        </select>
+                    `;
+
+                    uHtml += `
+                        <tr ${isWithdrawn ? 'class="table-danger" style="opacity:0.7"' : ''}>
+                            <td class="px-4">
+                                ${statusDot}<b>${data.email}</b> 
+                                ${isWithdrawn ? '<span class="badge bg-danger ms-1">탈퇴</span>' : ''}
+                            </td>
+                            <td><span class="badge bg-light text-dark border">${data.survey || '미응답'}</span></td>
+                            <td>${data.joinedAt?.toDate().toLocaleDateString() || '-'}</td>
+                            <td>${sessionTime}</td>
+                            <td style="width:120px;">${roleSelect}</td> 
+                            <td class="text-end px-4">
+                                <button class="btn btn-sm btn-outline-danger fw-bold ms-1" onclick="deleteUserAccount('${d.id}')">삭제</button>
+                            </td>
+                        </tr>`;
                 });
                 $('#adminUserList').html(uHtml);
 
-                let aHtml = "";
-                aSnap.forEach(d => {
-                    aHtml += `<div class="badge bg-dark p-2 d-flex align-items-center"><span>${d.id}</span><span class="remove-btn cursor-pointer ms-2" onclick="removeAdmin('${d.id}')">✕</span></div>`;
+                // 3. 최근 검색 기록 렌더링 (기존 유지)
+                let sHtml = "";
+                const sortedLogs = sSnap.docs.map(d => d.data()).sort((a,b) => b.time?.toMillis() - a.time?.toMillis()).slice(0, 50);
+                sortedLogs.forEach(log => {
+                    sHtml += `<tr><td class="px-4 small text-muted">${log.user}</td><td class="fw-bold">${log.keyword}</td><td class="small text-muted">${log.time?.toDate().toLocaleString() || '-'}</td></tr>`;
                 });
-                $('#adminBadgeList').html(aHtml);
+                $('#adminSearchList').html(sHtml);
+
+            } catch (e) { console.error(e); alert("데이터 로드 실패"); }
+        };
+
+        window.changeRole = async (email, newRole) => {
+            const targetEmail = email.toLowerCase();
+            try {
+                if (newRole === "admin") {
+                    // 관리자 추가
+                    await setDoc(doc(db, "admins", targetEmail), { 
+                        addedAt: serverTimestamp(),
+                        addedBy: currentUser.email 
+                    });
+                    alert(`${email}님에게 관리자 권한을 부여했습니다.`);
+                } else {
+                    // 관리자 제거 (강등)
+                    if (targetEmail === "kangdaxom@gmail.com") { // 최고 관리자 보호
+                        alert("최고 관리자 권한은 해제할 수 없습니다.");
+                        return loadAdmin();
+                    }
+                    await deleteDoc(doc(db, "admins", targetEmail));
+                    alert(`${email}님을 일반 유저로 변경했습니다.`);
+                }
+                loadAdmin(); // 테이블 새로고침
+            } catch (e) {
+                alert("권한 변경 실패: " + e.message);
+                loadAdmin();
+            }
+        };
+
+        // 관리자 권한 부여
+        window.promoteAdmin = async (email) => {
+            if (confirm(`${email}님에게 관리자 권한을 부여하시겠습니까?`)) {
+                try {
+                    await setDoc(doc(db, "admins", email.toLowerCase()), { addedAt: serverTimestamp() });
+                    alert("관리자 등록 완료!");
+                    loadAdmin();
+                } catch (e) { alert("권한 부여 실패"); }
+            }
+        };
+
+        // 계정 완전 삭제
+        window.deleteUserAccount = async (uid) => {
+            if (confirm("이 유저의 데이터를 DB에서 영구 삭제하시겠습니까? (복구 불가)")) {
+                try {
+                    await deleteDoc(doc(db, "users", uid));
+                    alert("삭제 완료!");
+                    loadAdmin();
+                } catch (e) { alert("삭제 실패"); }
+            }
+        };
+
+        // [통합] 설문 저장 함수 (기타 입력 로직 포함)
+        window.submitSurvey = async (v) => {
+            let finalValue = v;
+            if (v === '기타') {
+                const userInput = prompt("유입 경로를 직접 입력해 주세요:");
+                if (userInput === null) return; 
+                if (userInput.trim() === "") {
+                    alert("입력값이 필요합니다.");
+                    return;
+                }
+                finalValue = `기타(${userInput.trim()})`;
+            }
+
+            try {
+                await setDoc(doc(db, "users", currentUser.uid), { 
+                    email: currentUser.email, 
+                    survey: finalValue,
+                    apiKey: "", 
+                    status: "active",
+                    joinedAt: serverTimestamp() 
+                });
                 
-            } catch (e) { 
-                console.error("Admin Load Error:", e);
-                alert("권한이 없거나 오류가 발생했습니다."); 
-                window.showPage('analyzerPage', false); 
+                const modalElement = document.getElementById('surveyModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                if (modalInstance) modalInstance.hide();
+                
+                alert("감사합니다! 설정 페이지에서 API 키를 등록해 주세요.");
+                window.showPage('profilePage');
+            } catch (e) {
+                alert("저장 중 오류가 발생했습니다.");
             }
         };
 
@@ -285,43 +509,112 @@
             if(confirm('삭제하시겠습니까?')) { await deleteDoc(doc(db, "admins", email)); loadAdmin(); }
         };
 
+        // [수정] 인증 상태 변경 로직 - 일반 유저 튕김 방지 버전
         onAuthStateChanged(auth, async (user) => {
+            // [수정] 로그인 여부와 관계없이 가림막은 일단 숨겨서 메인 화면이 보이게 합니다.
+            $('#loginOverlay').hide();
+
             if (user) {
                 currentUser = user;
-                $('#loginOverlay').hide();
+                const hash = location.hash.replace('#', '');
+                
+                // 1. 유저 정보 확인 (일반 유저도 자기 데이터는 읽을 수 있음)
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    
+                    // 1. 탈퇴 유저 처리 (복구 제안)
+                    if (userData.status === "withdrawn") {
+                        if (confirm("이전에 탈퇴하신 계정입니다. 계정을 복구하시겠습니까?")) {
+                            await updateDoc(doc(db, "users", user.uid), { 
+                                status: "active",
+                                joinedAt: serverTimestamp(), 
+                                apiKey: "" 
+                            });
+                            alert("복구되었습니다!");
+                            location.reload(); 
+                            return;
+                        } else {
+                            await signOut(auth);
+                            location.reload();
+                            return;
+                        }
+                    }
+
+                    // 2. 기존 유저 정보 로드
+                    savedApiKey = userData.apiKey || "";
+                    $('#userApiKey').val(savedApiKey);
+                    if(savedApiKey) $('#apiKeyStatus').html("<span class='text-success'>✅ API 키 등록됨</span>");
+                    
+                } else {
+                    // 신규 유저: 설문 모달 띄우기
+                    if (hash !== 'profilePage') {
+                        new bootstrap.Modal(document.getElementById('surveyModal')).show();
+                    }
+                }
+
+                // 2. 관리자 체크
+                let isAdmin = false;
+                try {
+                    const adminDoc = await getDoc(doc(db, "admins", user.email.toLowerCase()));
+                    if (adminDoc.exists()) {
+                        isAdmin = true;
+                        $('#adminBtnArea').html(`<button class="btn btn-sm btn-warning fw-bold ms-2" onclick="loadAdmin()">🛠 대시보드</button>`);
+                        if($('#adminLink').length === 0) {
+                            $('#userMenu').prepend(`<li><a id="adminLink" class="dropdown-item fw-bold text-primary" href="javascript:void(0)" onclick="loadAdmin()">🚀 관리자 대시보드</a></li>`);
+                        }
+                    }
+                } catch (e) {
+                    console.log("관리자 권한 없음 (일반 유저 로그인)");
+                }
+
+                // 3. UI 표시
+                // [추가] 로그인 성공 시: '무료이용' 버튼 숨기고 '프로필' 보여주기
+                $('#guestControls').addClass('d-none');
+                $('#userControls').removeClass('d-none');
+
+                // [추가] 로그인 유도 모달이 열려있다면 닫습니다.
+                const loginM = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+                if(loginM) loginM.hide();
+
                 $('#navControls').removeClass('d-none');
                 $('#userAvatar').attr('src', user.photoURL);
                 $('#userEmailDisplay').text(user.email);
                 $('#profileEmail').val(user.email);
 
-                // 1. 관리자 여부 체크 및 버튼 노출
-                const adminDoc = await getDoc(doc(db, "admins", user.email.toLowerCase()));
-                if (adminDoc.exists()) {
-                    // 상단 버튼 (로고 옆)
-                    $('#adminBtnArea').html(`<button class="btn btn-sm btn-warning fw-bold ms-2" onclick="loadAdmin()">🛠 대시보드</button>`);
-                    
-                    // 메뉴 내 버튼 (아바타 클릭 시)
-                    if($('#adminLink').length === 0) {
-                        // href="javascript:void(0)"를 넣어 페이지 이동을 막고 onclick만 실행되게 합니다.
-                        $('#userMenu').prepend(`<li><a id="adminLink" class="dropdown-item fw-bold text-primary" href="javascript:void(0)" onclick="loadAdmin()">🚀 관리자 대시보드</a></li>`);
-                    }
-                }
-
-                // 2. 유저 정보 확인
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (!userDoc.exists()) {
-                    new bootstrap.Modal(document.getElementById('surveyModal')).show();
+                // 페이지 결정
+                if (hash === 'profilePage') {
+                    window.showPage('profilePage', false);
+                } else if (hash === 'adminPage' && isAdmin) {
+                    window.loadAdmin();
                 } else {
-                    savedApiKey = userDoc.data().apiKey || "";
-                    $('#userApiKey').val(savedApiKey);
-                    if(savedApiKey) $('#apiKeyStatus').html("<span class='text-success'>✅ API 키 등록됨</span>");
+                    window.showPage('analyzerPage', false);
                 }
+            } else {
+                // [추가] 로그아웃 상태일 때 처리
+                currentUser = null;
+                // [추가] 로그아웃 시: '무료이용' 버튼 보여주고 '프로필' 숨기기
+                $('#guestControls').removeClass('d-none');
+                $('#userControls').addClass('d-none');
+                
+                $('#navControls').removeClass('d-none'); // 버튼은 보여야 하므로 d-none 제거
             }
         });
 
-        // 분석 로직
-        $('#searchBtn').click(async function() {
-            if (!savedApiKey) { alert("API KEY 등록 필요"); return showPage('profilePage'); }
+        // 분석 로직 및 나머지 유틸리티 함수 (기존과 동일)
+        $('#searchBtn').click(async function() {// 1. 로그인 여부 체크
+            if (!currentUser) {
+                new bootstrap.Modal(document.getElementById('loginModal')).show();
+                return;
+            }
+
+            // 2. API KEY 체크
+            if (!savedApiKey) { 
+                alert("API KEY 등록이 필요합니다. 설정 페이지로 이동합니다."); 
+                return window.showPage('profilePage'); 
+            }
+            if (!savedApiKey) { alert("API KEY 등록 필요"); return window.showPage('profilePage'); }
             const queryText = $('#query').val();
             if (!queryText) return;
             
@@ -380,12 +673,24 @@
         window.saveUserData = async () => {
             const key = $('#userApiKey').val();
             await updateDoc(doc(db, "users", currentUser.uid), { apiKey: key });
-            savedApiKey = key; alert("저장 완료!"); showPage('analyzerPage');
+            savedApiKey = key; alert("저장 완료!"); window.showPage('analyzerPage');
         };
 
-        window.submitSurvey = async (v) => {
-            await setDoc(doc(db, "users", currentUser.uid), { email: currentUser.email, survey: v, apiKey: "", joinedAt: serverTimestamp() });
-            bootstrap.Modal.getInstance(document.getElementById('surveyModal')).hide();
+        // [추가] 필터 조건을 기본값으로 되돌리는 함수
+        window.resetToCustomDefaults = () => {
+            // 1. 각 필드 값을 기본 설정값으로 변경
+            $('#minViews').val(30000);
+            $('#monthsAgo').val("6");
+            $('#videoType').val("long_form");
+            $('#durationMax').val(20);
+            
+            // 2. 검색어창까지 초기화하고 싶다면 아래 주석 해제
+            // $('#query').val("");
+
+            // 3. UI 업데이트 (쇼츠 모드였다면 다시 롱폼 설정창을 보여줘야 함)
+            window.toggleTypeDetail();
+
+            console.log("필터 기본값 적용 완료");
         };
 
         function parseDurationToSec(d) {
@@ -419,27 +724,69 @@
             .on('mouseleave', '.thumb-img', function() { $('#hoverPreview').hide(); });
         });
 
-        // 사용자가 마우스 뒤로가기/앞으로가기를 눌렀을 때 실행
         window.onpopstate = function(event) {
             if (event.state && event.state.pageId) {
-                // 기록에 저장된 페이지로 이동 (중복 기록 방지를 위해 false 사용)
                 window.showPage(event.state.pageId, false);
             } else {
-                // 기록이 없으면 기본 페이지로
                 window.showPage('analyzerPage', false);
             }
         };
 
-        // 페이지 첫 접속 시 URL에 #이 있으면 해당 페이지를 바로 띄워줌
-        $(window).on('load', function() {
-            const hash = location.hash.replace('#', '');
-            if (hash && ['adminPage', 'profilePage', 'analyzerPage'].includes(hash)) {
-                setTimeout(() => window.showPage(hash, false), 500); // 로그인 대기용 0.5초 지연
-            } else {
-                // 첫 페이지 상태를 브라우저에 등록
-                history.replaceState({ pageId: 'analyzerPage' }, null, "#analyzerPage");
+        window.deleteMyAccount = async () => {
+            if (!confirm("정말 탈퇴하시겠습니까?\n데이터는 정책에 따라 1년간 보관 후 삭제됩니다.")) return;
+
+            try {
+                const userRef = doc(db, "users", currentUser.uid);
+                await updateDoc(userRef, {
+                    status: "withdrawn",
+                    deletedAt: serverTimestamp(),
+                    apiKey: "" 
+                });
+
+                alert("탈퇴 처리가 완료되었습니다.");
+                await signOut(auth);
+                location.reload(); 
+            } catch (e) {
+                alert("탈퇴 처리 중 오류가 발생했습니다.");
+            }
+        };
+
+
+        // 유저 접속 시점 기록
+        let startTime = Date.now();
+
+        // 유저가 페이지를 떠나거나 탭을 가릴 때 시간 기록
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'hidden' && currentUser) {
+                const endTime = Date.now();
+                const durationMinutes = Math.round((endTime - startTime) / 1000 / 60);
+                
+                // 1분 이상 머물렀을 때만 기록 업데이트
+                if (durationMinutes > 0) {
+                    try {
+                        const userRef = doc(db, "users", currentUser.uid);
+                        await updateDoc(userRef, {
+                            lastSessionTime: durationMinutes + "분",
+                            totalTime: increment(durationMinutes) // 전체 누적 시간 합산
+                        });
+                    } catch (e) {
+                        console.error("체류시간 기록 실패:", e);
+                    }
+                }
             }
         });
+
+        // 유저 활동 신호 주기적 전송 (30초마다)
+        setInterval(async () => {
+            if (currentUser) {
+                try {
+                    const userRef = doc(db, "users", currentUser.uid);
+                    await updateDoc(userRef, {
+                        lastActive: serverTimestamp()
+                    });
+                } catch (e) { console.error("활동 신호 전송 실패"); }
+            }
+        }, 30000);
     </script>
 </body>
 </html>
