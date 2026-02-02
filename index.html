@@ -166,7 +166,7 @@
                             <td class="row-channel"></td>
                             <td class="row-subs" style="text-align: right;"></td>
                             <td class="row-tags">
-                                <button class="tag-btn" style="cursor: pointer; background: #212529; color: white; border: none; border-radius: 4px; padding: 2px 10px; font-weight: bold;"></button>
+                                <button class="tag-btn tag-badge" style="cursor: pointer; background: #212529; color: white; border: none; border-radius: 4px; padding: 2px 10px; font-weight: bold;"></button>
                             </td>
                             <td class="row-desc"></td>
                             <td class="row-link"></td>
@@ -1144,6 +1144,57 @@ function formatDuration(d) {
                             const temp = document.querySelector('#rowTemplate');
                             const clone = document.importNode(temp.content, true);
 
+                            // ===== 날짜 / 시간 =====
+                            const published = new Date(s.publishedAt);
+                            clone.querySelector('.row-date').textContent =
+                                published.toLocaleDateString('ko-KR');
+
+                            clone.querySelector('.row-time').textContent =
+                                published.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+
+                            // ===== 좋아요 / 댓글 =====
+                            clone.querySelector('.row-likes').textContent =
+                                parseInt(v.statistics?.likeCount || 0).toLocaleString();
+
+                            clone.querySelector('.row-comments').textContent =
+                                parseInt(v.statistics?.commentCount || 0).toLocaleString();
+
+                            // ===== 태그 =====
+                            const tagList = Array.isArray(s.tags) ? s.tags : [];
+                            const tagCount = tagList.length;
+                            const tagString = tagList.join(',');
+
+                            const tagBtn = clone.querySelector('.row-tags button');
+
+                            if (tagCount > 0) {
+                                tagBtn.textContent = tagCount;
+                                tagBtn.disabled = false;
+
+                                tagBtn.onclick = (e) => {
+                                    e.stopPropagation();
+                                    window.openTagModal(tagString);
+                                };
+                            } else {
+                                tagBtn.textContent = '0';
+                                tagBtn.disabled = true;
+                                tagBtn.style.opacity = 0.4;
+                            }
+
+
+                            // ===== 설명 =====
+                            clone.querySelector('.row-desc').textContent =
+                                (s.description || '').substring(0, 200);
+
+                            // ===== 링크 =====
+                            clone.querySelector('.row-link').innerHTML =
+                                `<a href="https://www.youtube.com/watch?v=${videoId}" 
+                                    target="_blank" class="btn btn-sm btn-outline-dark">열기</a>`;
+
+                            // ===== 길이 =====
+                            clone.querySelector('.row-duration').textContent =
+                                formatDuration(v.contentDetails?.duration);
+
+
                             clone.querySelector('.row-thumb').innerHTML =
                                 `<img src="${s.thumbnails?.default?.url || ''}" 
                                     data-highres="${s.thumbnails?.high?.url || ''}"
@@ -1290,6 +1341,83 @@ function formatDuration(d) {
                 } catch (e) { console.error("활동 신호 전송 실패"); }
             }
         }, 30000);
+
+
+        // ---------------------------------------------------------
+// 1. 메인 검색 결과 테이블 렌더링 함수 (복구 코드)
+// ---------------------------------------------------------
+// 1. 메인 검색 결과 테이블 렌더링 함수 (데이터 누락 방지 강화 버전)
+function renderTable(videos) {
+    const tbody = document.getElementById('resultBody');
+    const status = document.getElementById('status');
+    
+    if (!tbody) return;
+    tbody.innerHTML = ''; 
+    
+    if (status) status.style.display = 'none';
+
+    videos.forEach((video, index) => {
+        // [날짜/시간 가공]
+        const pubAt = video.publishedAt || "";
+        const datePart = pubAt.includes('T') ? pubAt.split('T')[0] : (pubAt || "-");
+        const timePart = pubAt.includes('T') ? pubAt.split('T')[1].substring(0, 5) : "-";
+
+        // [숫자 데이터 유효성 검사] - 값이 없으면 0으로 표시
+        const viewCount = video.viewCount && video.viewCount !== "undefined" ? Number(video.viewCount).toLocaleString() : "0";
+        const likeCount = video.likeCount && video.likeCount !== "undefined" ? Number(video.likeCount).toLocaleString() : "0";
+        const commentCount = video.commentCount && video.commentCount !== "undefined" ? Number(video.commentCount).toLocaleString() : "0";
+        const subCount = video.subscriberCount && video.subscriberCount !== "undefined" ? Number(video.subscriberCount).toLocaleString() : "비공개";
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${index + 1}</td>
+            <td><img src="${video.thumbnail}" width="100" class="rounded shadow-sm" onerror="this.src='https://via.placeholder.com/100x60?text=No+Img'"></td>
+            <td class="fw-bold" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${video.title}">
+                ${video.title || "제목 없음"}
+            </td>
+            <td>${datePart}</td>
+            <td>${timePart}</td>
+            <td class="text-end fw-bold">${viewCount}</td>
+            <td class="text-end text-danger">${likeCount}</td>
+            <td class="text-end">${commentCount}</td>
+            <td><span class="badge bg-light text-dark border">${video.categoryName || '기타'}</span></td>
+            <td>${video.channelTitle || "-"}</td>
+            <td class="text-end text-muted" style="font-size: 0.8rem;">${subCount}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick='window.showTags(${JSON.stringify(video.tags || [])})'>태그보기</button>
+            </td>
+            <td>
+                <button class="btn btn-sm btn-outline-secondary" onclick="window.showDesc(\`${(video.description || '').replace(/[`\\$]/g, '\\$&')}\`)">설명</button>
+            </td>
+            <td>
+                <a href="https://youtu.be/${video.id}" target="_blank" class="btn btn-sm btn-danger">링크</a>
+            </td>
+            <td>${video.duration || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// 2. 태그 모달 표시 함수
+window.showTags = (tags) => {
+    const tagArea = document.getElementById('tagArea');
+    if (!tags || tags.length === 0) {
+        alert("태그가 없는 영상입니다.");
+        return;
+    }
+    tagArea.value = Array.isArray(tags) ? tags.join(', ') : tags;
+    const tagModalElement = document.getElementById('tagModal');
+    if (tagModalElement) {
+        const tagModal = new bootstrap.Modal(tagModalElement);
+        tagModal.show();
+    }
+};
+
+// 3. 설명 보기 함수
+window.showDesc = (desc) => {
+    alert(desc.substring(0, 500) + "...");
+};
+// ---------------------------------------------------------
     </script>
 </body>
 </html>
