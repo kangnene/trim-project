@@ -3,9 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>트림픽</title>
+    <title>TRIM PICK | 유튜브 영상 분석 및 트리밍 도구</title>
+    <meta name="description" content="유튜브 영상을 스마트하게 분석하고 원하는 구간을 정교하게 추출하세요. TRIM PICK으로 영상 편집 효율을 높이세요.">
+    <meta name="keywords" content="유튜브분석, 영상편집, 트리밍, 유튜브컷, TRIM PICK, 트림픽, 유튜브필터, 유튜브 분석 사이트, 유튜브 필터 사이트, 무료 유튜브 분석, 무료 유튜브 필터, 영상구간추출">
+    <meta name="author" content="TRIM PICK">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.trimpick.com/">
+    <meta property="og:title" content="TRIM PICK - 스마트 유튜브 분석기">
+    <meta property="og:description" content="클릭 몇 번으로 유튜브 영상을 분석하고 최적의 구간을 찾아보세요.">
+    <meta property="og:image" content="https://www.trimpick.com/img/og-image.png"> <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="TRIM PICK">
+    <meta name="twitter:description" content="유튜브 영상 분석의 새로운 기준, TRIM PICK">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link rel="icon" href="img/favicon.png" type="image/png">
     <style>
         /* 테이블 텍스트 생략 (...) 처리 - 부트스트랩에 없는 기능 */
         #ytTable td { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -36,7 +48,7 @@
      src="" 
      style="position: fixed; z-index: 9999; pointer-events: none; display: none; max-width: 320px; border: 2px solid #fff;">
 
-    <nav class="navbar navbar-expand-lg py-1 shadow-sm navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg py-1 shadow-sm" style="background-color: #333;">
         <div class="container-fluid">
             <div class="d-flex align-items-center">
                 <a class="navbar-brand fw-bold me-2 text-white" href="https://www.trimpick.com" onclick="showPage('analyzerPage')">TRIM PICK</a>
@@ -52,7 +64,7 @@
                     </button>
                 </div>
 
-                <span class="badge bg-dark d-none" style="font-size: 0.8rem; padding: 8px 12px;">
+                <span class="badge bg-none d-none text-warning" style="font-size: 0.8rem; padding: 8px 12px;">
                     오늘 API 잔여 할당량: <span id="quotaUsage">10,000</span> / 10,000
                 </span>
 
@@ -207,77 +219,82 @@
         </div>
     </div>
 
-    <div id="adminPage" class="container mt-4 page" style="display: none !important; overflow: auto;">
-    <div class="row mb-4 text-center">
-        <div class="col-md-3 mb-3">
-            <div class="card border-0 shadow-sm py-3 bg-primary text-white">
-                <h6 class="mb-1 opacity-75 small">총 가입자</h6>
-                <h3 class="fw-bold mb-0" id="totalUserCount">0</h3>
+<div id="adminPage" class="container-fluid page" style="display: none; height: 100vh; overflow-y: auto !important; font-family: sans-serif; padding: 20px; background-color: #f8f9fa;">
+    
+    <div class="row g-3 mb-4 text-center" style="flex-shrink: 0;">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3 bg-primary text-white" style="border-radius: 12px;">
+                <p class="mb-1 opacity-75" style="font-size: 0.9rem;">총 가입자</p>
+                <h3 class="fw-bold mb-0" id="totalUserCount" style="font-size: 1.5rem;">0</h3>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card border-0 shadow-sm py-3 bg-success text-white">
-                <h6 class="mb-1 opacity-75 small">누적 검색</h6>
-                <h3 class="fw-bold mb-0" id="totalSearchCount">0</h3>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3 bg-success text-white" style="border-radius: 12px;">
+                <p class="mb-1 opacity-75" style="font-size: 0.9rem;">누적 검색</p>
+                <h3 class="fw-bold mb-0" id="totalSearchCount" style="font-size: 1.5rem;">0</h3>
             </div>
         </div>
-        <div class="col-md-6 mb-3">
-            <div class="card border-0 shadow-sm py-3">
-                <h6 class="text-muted mb-1 small">평균 머무는 시간</h6>
-                <h3 class="fw-bold mb-0" id="avgSessionTime">12분 45초</h3>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-md-6 mb-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white py-3"><h6 class="fw-bold mb-0">🔥 인기 키워드 TOP 10 (최근 1개월)</h6></div>
-                <div class="card-body"><ul id="topKeywordList" class="list-group list-group-flush small"></ul></div>
-            </div>
-        </div>
-        <div class="col-md-6 mb-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white py-3"><h6 class="fw-bold mb-0">📈 유입 경로 분석</h6></div>
-                <div class="card-body" id="surveyStatList"></div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm p-3" style="border-radius: 12px;">
+                <p class="text-muted mb-1" style="font-size: 0.9rem;">평균 머무는 시간</p>
+                <h3 class="fw-bold mb-0" id="avgSessionTime" style="font-size: 1.5rem;">12분 45초</h3>
             </div>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-white py-3"><h5 class="fw-bold mb-0">👥 가입자 명단 관리</h5></div>
-        <div class="card-body p-0">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th class="px-4">이메일</th>
-                        <th>유입 경로</th>
-                        <th>가입일</th>
-                        <th>평균 체류</th>
-                        <th>권한</th>
-                        <th class="text-end px-4">관리</th> 
-                    </tr>
-                </thead>
-                <tbody id="adminUserList"></tbody>
-            </table>
+    <div class="row g-3 mb-4" style="min-height: 350px;">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm" style="height: 350px; display: flex; flex-direction: column; overflow: hidden; border-radius: 12px;">
+                <div class="card-header bg-white py-3 border-bottom"><span class="fw-bold" style="font-size: 1rem;">📈 유입 경로 분석</span></div>
+                <div class="card-body p-3" id="surveyStatList" style="font-size: 0.9rem; overflow-y: auto;"></div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm" style="height: 350px; display: flex; flex-direction: column; overflow: hidden; border-radius: 12px;">
+                <div class="card-header bg-white py-3 border-bottom"><span class="fw-bold" style="font-size: 1rem;">🔥 인기 키워드 TOP 10</span></div>
+                <div class="card-body p-3" style="font-size: 0.9rem; overflow-y: auto;">
+                    <ul id="topKeywordList" class="list-group list-group-flush"></ul>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-            <h5 class="fw-bold mb-0">🔍 최근 검색 기록</h5>
+    <div class="row g-3 mb-5" style="min-height: 350px;">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm" style="height: 350px; display: flex; flex-direction: column; overflow: hidden; border-radius: 12px;">
+                <div class="card-header bg-white py-3 border-bottom"><span class="fw-bold" style="font-size: 1rem;">👥 가입자 명단 관리</span></div>
+                <div style="flex-grow: 1; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                        <thead style="position: sticky; top: 0; background-color: #f8f9fa; z-index: 10; box-shadow: inset 0 -1px 0 #dee2e6;">
+                            <tr>
+                                <th class="px-3">이메일</th>
+                                <th>유입</th>
+                                <th>가입일</th>
+                                <th>체류</th>
+                                <th class="text-end px-3">관리</th> 
+                            </tr>
+                        </thead>
+                        <tbody id="adminUserList"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-        <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th class="px-4">사용자</th>
-                        <th>검색어</th>
-                        <th>일시</th>
-                    </tr>
-                </thead>
-                <tbody id="adminSearchList"></tbody>
-            </table>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm" style="height: 350px; display: flex; flex-direction: column; overflow: hidden; border-radius: 12px;">
+                <div class="card-header bg-white py-3 border-bottom"><span class="fw-bold" style="font-size: 1rem;">🔍 최근 검색 기록</span></div>
+                <div style="flex-grow: 1; overflow-y: auto;">
+                    <table class="table table-hover mb-0" style="font-size: 0.85rem;">
+                        <thead style="position: sticky; top: 0; background-color: #f8f9fa; z-index: 10; box-shadow: inset 0 -1px 0 #dee2e6;">
+                            <tr>
+                                <th class="px-3">사용자</th>
+                                <th>검색어</th>
+                                <th>일시</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminSearchList"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -444,31 +461,47 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        let totalQuotaUsed = parseInt(localStorage.getItem('youtube_quota_usage') || '0');
-        const lastDate = localStorage.getItem('quota_date');
-        const todayDate = new Date().toLocaleDateString();
+        // ===============================
+        // 🔥 YouTube API Quota Manager (최종본)
+        // ===============================
+        const DAILY_QUOTA_LIMIT = 10000;
 
-        if (lastDate !== todayDate) {
-            totalQuotaUsed = 0;
-            localStorage.setItem('youtube_quota_usage', '0');
-            localStorage.setItem('quota_date', todayDate);
+        function getTodayKey() {
+            return new Date().toLocaleDateString(); // 사용자 로컬 기준
         }
 
-        function updateQuota(amount) {
-            if (!currentUser) return; // 로그인 안 되어 있으면 기록 안 함
+        function loadQuota(uid) {
+            const quotaKey = `youtube_quota_${uid}`;
+            const dateKey = `youtube_quota_date_${uid}`;
+            const today = getTodayKey();
 
-            // 장부 이름을 계정별로 다르게 설정 (예: youtube_quota_abc123)
-            const quotaKey = `youtube_quota_${currentUser.uid}`;
-            
-            totalQuotaUsed += amount;
-            localStorage.setItem(quotaKey, totalQuotaUsed);
-            
-            const display = document.getElementById('quotaUsage');
-            if (display) {
-                let remaining = 10000 - totalQuotaUsed;
-                if (remaining < 0) remaining = 0;
-                display.textContent = remaining.toLocaleString();
+            const savedDate = localStorage.getItem(dateKey);
+            let used = parseInt(localStorage.getItem(quotaKey) || '0');
+
+            // 날짜가 바뀌었으면 리셋
+            if (savedDate !== today) {
+                used = 0;
+                localStorage.setItem(quotaKey, '0');
+                localStorage.setItem(dateKey, today);
             }
+
+            return used;
+        }
+
+        function increaseQuota(uid, amount) {
+            let used = loadQuota(uid);
+            used += amount;
+            localStorage.setItem(`youtube_quota_${uid}`, used.toString());
+            updateQuotaUI(uid);
+        }
+
+        function updateQuotaUI(uid) {
+            const display = document.getElementById('quotaUsage');
+            if (!display) return;
+
+            const used = loadQuota(uid);
+            const remaining = Math.max(0, DAILY_QUOTA_LIMIT - used);
+            display.textContent = remaining.toLocaleString();
         }
 
         let dataTable, currentUser, savedApiKey = "";
@@ -728,32 +761,16 @@
             if (user) {
                 currentUser = user;
                 const hash = location.hash.replace('#', '');
+
+                // 1. [여기에 추가] 할당량 배지 다시 보여주기
+                if (quotaBadge) {
+                    quotaBadge.classList.remove('d-none');
+                }
+                updateQuotaUI(user.uid);
                 
                 // [추가] 로그인 성공 상태라면, 혹시 열려있을지 모를 로그인 모달을 강제로 닫음
                 const loginM = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
                 if(loginM) loginM.hide();
-
-                // --- [할당량 관리 로직 추가 시작] ---
-                const quotaKey = `youtube_quota_${user.uid}`;
-                const todayDate = new Date().toLocaleDateString();
-                const lastDate = localStorage.getItem(`quota_date_${user.uid}`);
-
-                // 날짜가 바뀌었으면 해당 유저의 할당량 초기화
-                if (lastDate !== todayDate) {
-                    localStorage.setItem(quotaKey, '0');
-                    localStorage.setItem(`quota_date_${user.uid}`, todayDate);
-                    totalQuotaUsed = 0;
-                } else {
-                    totalQuotaUsed = parseInt(localStorage.getItem(quotaKey) || '0');
-                }
-
-                // UI 배지 보이기 및 숫자 업데이트
-                if (quotaBadge) quotaBadge.classList.remove('d-none');
-                if (display) {
-                    let remaining = 10000 - totalQuotaUsed;
-                    display.textContent = (remaining < 0 ? 0 : remaining).toLocaleString();
-                }
-                // --- [할당량 관리 로직 추가 끝] ---
 
                 // 1. 유저 정보 확인 (기존 로직 유지)
                 const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -826,7 +843,6 @@
             } else {
                 // 4. 로그아웃 상태일 때 처리
                 currentUser = null;
-                totalQuotaUsed = 0; // 초기화
 
                 // [추가] 로그아웃 시 할당량 배지 숨기기
                 if (quotaBadge) quotaBadge.classList.add('d-none');
@@ -852,245 +868,6 @@
 
 
 
-        // 분석 로직 및 나머지 유틸리티 함수 (기존과 동일)
-        $('#searchBtn').click(async function() {// 1. 로그인 여부 체크
-            if (!currentUser) {
-                new bootstrap.Modal(document.getElementById('loginModal')).show();
-                return;
-            }
-
-            // 2. API KEY 체크
-            if (!savedApiKey) { 
-                alert("API KEY 등록이 필요합니다. 설정 페이지로 이동합니다."); 
-                return window.showPage('profilePage'); 
-            }
-            if (!savedApiKey) { alert("API KEY 등록 필요"); return window.showPage('profilePage'); }
-            const queryText = $('#query').val();
-            if (!queryText) return;
-
-            // 🌍 검색어 언어 기반 검색 전략 결정
-            const lang = detectLanguage(queryText);
-
-            let regionParam = '';
-            let relevanceLangParam = '';
-            let orderParam = ''; // 🔥 정렬 방식 분리
-
-            if (lang === 'ko') {
-                orderParam = '&order=viewCount'; // 한국어만 조회수 기준
-            }
-
-            // 🇰🇷 한국어만 한국 기준
-            if (lang === 'ko') {
-                regionParam = '&regionCode=KR';
-                relevanceLangParam = '&relevanceLanguage=ko';
-            }
-            // 🇯🇵 일본어
-            else if (lang === 'ja') {
-                relevanceLangParam = '&relevanceLanguage=ja';
-            }
-            // 🇺🇸 영어
-            else if (lang === 'en') {
-                relevanceLangParam = '&relevanceLanguage=en';
-            }
-            // 기타 언어 → 글로벌 (아무것도 안 붙임)
-            
-            try { await addDoc(collection(db, "searchLogs"), { user: currentUser.email, keyword: queryText, time: serverTimestamp() }); } catch(e) {}
-            
-            $('#status').html('분석 중...');
-            dataTable.clear().draw();
-
-            try {
-                const TARGET_COUNT = 30;        // 최종 목표 개수
-                const MAX_SEARCH_PAGES = 15;   // 안정화용 최대 탐색 페이지
-
-                const minV = parseInt($('#minViews').val()) || 0;
-                const typeFilter = $('#videoType').val();
-                const durMax = parseInt($('#durationMax').val()) || 20;
-                const months = $('#monthsAgo').val();
-                let dateParam = '';
-                if (months !== 'all') {
-                    const date = new Date(); date.setMonth(date.getMonth() - parseInt(months));
-                    dateParam = `&publishedAfter=${date.toISOString()}`;
-                }
-
-                let results = [];                
-                let nextToken = '';
-                const seenVideoIds = new Set();
-                let searchPageCount = 0;
-                while (
-                    results.length < TARGET_COUNT &&
-                    searchPageCount < MAX_SEARCH_PAGES
-                ){ 
-                    searchPageCount++;
-                    updateQuota(100);
-                    const res = await fetch(
-                    `https://www.googleapis.com/youtube/v3/search` +
-                    `?part=snippet` +
-                    `&type=video` +
-                    `&q=${encodeURIComponent(queryText)}` +
-                    `${dateParam}` +
-                    `${nextToken ? '&pageToken=' + nextToken : ''}` +
-                    `${regionParam}` +
-                    `${relevanceLangParam}` +
-                    `${orderParam}` +
-                    `&maxResults=50` +
-                    `&key=${savedApiKey}`
-                );
-
-                    const data = await res.json();
-
-                    if (!data.items || data.items.length === 0) {
-                        if (!data.nextPageToken) break; // 🔥 무한/헛페이지 방지
-                        nextToken = data.nextPageToken;
-                        continue;
-                    }
-
-                    const vIds = data.items
-                        .map(v => typeof v.id === 'string' ? v.id : v.id?.videoId)
-                        .filter(Boolean)
-                        .join(',');
-
-                    if (!vIds) {
-                        nextToken = data.nextPageToken;
-                        continue;
-                    }
-
-                    updateQuota(1);
-                    const vRes = await fetch(
-                    `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${vIds}&key=${savedApiKey}`
-                    );
-                    const vData = await vRes.json();
-
-                    // ✅ [2] videos 결과 방어 (여기!)
-                    if (!vData.items || vData.items.length === 0) {
-                        nextToken = data.nextPageToken;
-                        continue; // 👉 search 다음 페이지로
-                    }
-                                        
-                    const cIds = [...new Set(vData.items.map(v => v.snippet.channelId))].join(',');
-                    updateQuota(1);
-                    const cRes = await fetch(
-                    `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${cIds}&key=${savedApiKey}`
-                    );
-
-                    const cData = await cRes.json();
-                    const cMap = {};
-
-                    // ✅ [3] channels 결과 방어 (여기!)
-                    if (cData.items && cData.items.length > 0) {
-                        cData.items.forEach(c => {
-                            cMap[c.id] = c.statistics?.subscriberCount || null;
-                        });
-                    }
-                    for (const v of vData.items) {
-
-                        // ✅ videoId 안정화 (중복/누락 방지 핵심)
-                        const videoId =
-                            typeof v.id === 'string'
-                                ? v.id
-                                : v.id?.videoId;
-
-                        if (!videoId) continue;
-
-                        // 🔥 중복 제거 최우선
-                        if (seenVideoIds.has(videoId)) continue;
-                        seenVideoIds.add(videoId);
-
-                        // === statistics 방어 ===
-                        const views = parseInt(v.statistics?.viewCount || 0);
-                        if (!v.contentDetails?.duration) continue;
-
-                        const sec = parseDurationToSec(v.contentDetails.duration);
-
-                        let pass = (views >= minV);
-                        if (typeFilter === 'long_form') pass = pass && (sec >= 180 && sec <= durMax * 60);
-                        if (typeFilter === 'short_form') pass = pass && (sec < 60);
-
-                        if (!pass) continue;
-
-                        // 🔥 여기서 진짜 루프 종료
-                        if (results.length >= TARGET_COUNT) break;
-
-                        if (!v.snippet) continue;
-                        const s = v.snippet;
-
-                        const hr =
-                            s.thumbnails?.maxres?.url ||
-                            s.thumbnails?.high?.url ||
-                            s.thumbnails?.medium?.url ||
-                            s.thumbnails?.default?.url ||
-                            '';
-
-                        const thumb =
-                            s.thumbnails?.default?.url ||
-                            s.thumbnails?.medium?.url ||
-                            '';
-
-                        const temp = document.querySelector('#rowTemplate');
-                        const clone = document.importNode(temp.content, true);
-
-                        clone.querySelector('.row-thumb').innerHTML =
-                            `<img src="${thumb}" data-highres="${hr}" class="thumb-img rounded" style="width:50px;">`;
-
-                        clone.querySelector('.row-title').textContent = s.title || '';
-                        clone.querySelector('.row-date').textContent =
-                            s.publishedAt ? new Date(s.publishedAt).toLocaleDateString() : '';
-                        clone.querySelector('.row-time').textContent =
-                            s.publishedAt ? new Date(s.publishedAt).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : '';
-
-                        clone.querySelector('.row-views').textContent = views.toLocaleString();
-                        clone.querySelector('.row-likes').textContent = parseInt(v.statistics?.likeCount || 0).toLocaleString();
-                        clone.querySelector('.row-comments').textContent = parseInt(v.statistics?.commentCount || 0).toLocaleString();
-
-                        clone.querySelector('.row-category').textContent = CATEGORY_MAP[s.categoryId] || '기타';
-                        clone.querySelector('.row-channel').textContent = s.channelTitle || '';
-                        clone.querySelector('.row-subs').textContent =
-                            cMap[s.channelId]
-                                ? parseInt(cMap[s.channelId]).toLocaleString()
-                                : '비공개';
-
-                        const tagBtn = clone.querySelector('.tag-btn');
-                        const tags = Array.isArray(s.tags) ? s.tags : [];
-                        tagBtn.textContent = tags.length;
-                        tagBtn.setAttribute(
-                            "onclick",
-                            `openTagModal("${tags.join(',').replace(/"/g, '&quot;')}")`
-                        );
-
-                        clone.querySelector('.row-desc').textContent = s.description || '';
-                        clone.querySelector('.row-link').innerHTML =
-                            `<a href="https://youtu.be/${videoId}" target="_blank">Link</a>`;
-                        clone.querySelector('.row-duration').textContent =
-                            formatDuration(v.contentDetails.duration);
-
-                        const rowData = Array.from(clone.querySelectorAll('td')).map(td => td.innerHTML);
-                        results.push(rowData);
-                    }
-
-
-                    nextToken = data.nextPageToken;
-                    if (!nextToken) break;
-                }
-                // ✅ while 완전히 끝난 뒤에만!
-                if (searchPageCount === MAX_SEARCH_PAGES && results.length < TARGET_COUNT) {
-                    console.warn('조건이 엄격해 결과가 부족함:', results.length);
-                }
-                console.log('results length BEFORE DataTable:', results.length);
-
-                // 테이블에 넣기
-                dataTable.clear();
-                dataTable.rows.add(results).draw();
-
-                // ✅ 사용자 상태 메시지
-                $('#status').text(
-                    results.length < TARGET_COUNT
-                        ? `조건이 엄격하여 ${results.length}건만 분석됨`
-                        : `분석 완료: ${results.length}건`
-                );
-
-                console.log('rows in DataTable AFTER draw:', dataTable.rows().count());
-            } catch(e) { $('#status').text("오류 발생"); }
-        });
 
         // 가이드 패널 열기
         window.openGuide = () => {
@@ -1207,6 +984,204 @@ function formatDuration(d) {
                 }
             });
 
+            // 분석 로직 및 나머지 유틸리티 함수 (기존과 동일)
+            $('#searchBtn').click(async function () {
+
+                /* ===============================
+                0. 검색어 확보 (🔥 필수)
+                =============================== */
+                const queryText = $('#query').val().trim();
+                if (!queryText) {
+                    alert('검색어를 입력해주세요.');
+                    return;
+                }
+
+                /* ===============================
+                1. 로그인 여부 체크
+                =============================== */
+                if (!currentUser) {
+                    new bootstrap.Modal(document.getElementById('loginModal')).show();
+                    return;
+                }
+
+                /* ===============================
+                2. API KEY 체크
+                =============================== */
+                if (!savedApiKey) {
+                    alert("API KEY 등록이 필요합니다. 설정 페이지로 이동합니다.");
+                    return window.showPage('profilePage');
+                }
+
+                /* ===============================
+                3. 검색어 언어 감지
+                =============================== */
+                const lang = detectLanguage(queryText);
+
+                let regionParam = '';
+                let relevanceLangParam = '';
+                let orderParam = '';
+
+                if (lang === 'ko') {
+                    orderParam = '&order=viewCount';
+                    regionParam = '&regionCode=KR';
+                    relevanceLangParam = '&relevanceLanguage=ko';
+                } else if (lang === 'ja') {
+                    relevanceLangParam = '&relevanceLanguage=ja';
+                } else if (lang === 'en') {
+                    relevanceLangParam = '&relevanceLanguage=en';
+                }
+
+                /* ===============================
+                4. 검색 로그 저장 (실패해도 무시)
+                =============================== */
+                try {
+                    await addDoc(collection(db, "searchLogs"), {
+                        user: currentUser.email,
+                        keyword: queryText,
+                        time: serverTimestamp()
+                    });
+                } catch (e) {}
+
+                $('#status').text('분석 중...');
+                dataTable.clear().draw();
+
+                try {
+                    /* ===============================
+                    5. 필터 값
+                    =============================== */
+                    const TARGET_COUNT = 30;
+                    const MAX_SEARCH_PAGES = 15;
+
+                    const minV = parseInt($('#minViews').val()) || 0;
+                    const typeFilter = $('#videoType').val();
+                    const durMax = parseInt($('#durationMax').val()) || 20;
+                    const months = $('#monthsAgo').val();
+
+                    let dateParam = '';
+                    if (months !== 'all') {
+                        const date = new Date();
+                        date.setMonth(date.getMonth() - parseInt(months));
+                        dateParam = `&publishedAfter=${date.toISOString()}`;
+                    }
+
+                    /* ===============================
+                    6. 검색 루프
+                    =============================== */
+                    let results = [];
+                    let nextToken = '';
+                    let searchPageCount = 0;
+                    const seenVideoIds = new Set();
+
+                    while (results.length < TARGET_COUNT && searchPageCount < MAX_SEARCH_PAGES) {
+                        searchPageCount++;
+
+                        increaseQuota(currentUser.uid, 100);
+
+                        const res = await fetch(
+                            `https://www.googleapis.com/youtube/v3/search` +
+                            `?part=snippet&type=video` +
+                            `&q=${encodeURIComponent(queryText)}` +
+                            `${dateParam}` +
+                            `${nextToken ? '&pageToken=' + nextToken : ''}` +
+                            `${regionParam}${relevanceLangParam}${orderParam}` +
+                            `&maxResults=50&key=${savedApiKey}`
+                        );
+
+                        const data = await res.json();
+                        if (!data.items || data.items.length === 0) break;
+
+                        const vIds = data.items
+                            .map(v => typeof v.id === 'string' ? v.id : v.id?.videoId)
+                            .filter(Boolean)
+                            .join(',');
+
+                        if (!vIds) {
+                            nextToken = data.nextPageToken;
+                            continue;
+                        }
+
+                        increaseQuota(currentUser.uid, 1);
+
+                        const vRes = await fetch(
+                            `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${vIds}&key=${savedApiKey}`
+                        );
+                        const vData = await vRes.json();
+                        if (!vData.items || vData.items.length === 0) {
+                            nextToken = data.nextPageToken;
+                            continue;
+                        }
+
+                        const cIds = [...new Set(vData.items.map(v => v.snippet.channelId))].join(',');
+                        increaseQuota(currentUser.uid, 1);
+
+                        const cRes = await fetch(
+                            `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${cIds}&key=${savedApiKey}`
+                        );
+                        const cData = await cRes.json();
+
+                        const cMap = {};
+                        cData.items?.forEach(c => {
+                            cMap[c.id] = c.statistics?.subscriberCount || null;
+                        });
+
+                        for (const v of vData.items) {
+                            const videoId = typeof v.id === 'string' ? v.id : v.id?.videoId;
+                            if (!videoId || seenVideoIds.has(videoId)) continue;
+                            seenVideoIds.add(videoId);
+
+                            const views = parseInt(v.statistics?.viewCount || 0);
+                            const sec = parseDurationToSec(v.contentDetails?.duration);
+                            if (!sec) continue;
+
+                            let pass = views >= minV;
+                            if (typeFilter === 'long_form') pass &&= (sec >= 180 && sec <= durMax * 60);
+                            if (typeFilter === 'short_form') pass &&= (sec < 60);
+                            if (!pass) continue;
+
+                            if (results.length >= TARGET_COUNT) break;
+
+                            const s = v.snippet;
+                            const temp = document.querySelector('#rowTemplate');
+                            const clone = document.importNode(temp.content, true);
+
+                            clone.querySelector('.row-thumb').innerHTML =
+                                `<img src="${s.thumbnails?.default?.url || ''}" 
+                                    data-highres="${s.thumbnails?.high?.url || ''}"
+                                    class="thumb-img rounded" style="width:50px;">`;
+
+                            clone.querySelector('.row-title').textContent = s.title || '';
+                            clone.querySelector('.row-views').textContent = views.toLocaleString();
+                            clone.querySelector('.row-channel').textContent = s.channelTitle || '';
+                            clone.querySelector('.row-subs').textContent =
+                                cMap[s.channelId] ? parseInt(cMap[s.channelId]).toLocaleString() : '비공개';
+
+                            results.push(
+                                Array.from(clone.querySelectorAll('td')).map(td => td.innerHTML)
+                            );
+                        }
+
+                        nextToken = data.nextPageToken;
+                        if (!nextToken) break;
+                    }
+
+                    /* ===============================
+                    7. 결과 출력
+                    =============================== */
+                    dataTable.clear();
+                    dataTable.rows.add(results).draw();
+
+                    $('#status').text(
+                        results.length < TARGET_COUNT
+                            ? `조건이 엄격하여 ${results.length}건만 분석됨`
+                            : `분석 완료: ${results.length}건`
+                    );
+
+                } catch (e) {
+                    console.error(e);
+                    $('#status').text("오류 발생");
+                }
+            });
+
 
             // 2. 테이블 행 클릭 이벤트
             $(document).on('click', '#ytTable tbody tr', function(e) {
@@ -1247,11 +1222,8 @@ function formatDuration(d) {
                     $('#searchBtn').click();
                 }
             });
-            const display = document.getElementById('quotaUsage');
-            if (display) {
-                let remaining = 10000 - totalQuotaUsed;
-                if (remaining < 0) remaining = 0;
-                display.textContent = remaining.toLocaleString();
+            if (currentUser) {
+                updateQuotaUI(currentUser.uid);
             }
         });
 
