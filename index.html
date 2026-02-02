@@ -3,36 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trim</title>
+    <title>트림픽</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <style>
-        /* 전체 레이아웃 (부트스트랩만으론 한계가 있음) */
-        body { height: 100vh; overflow: hidden; background-color: #f1f3f5; }
-        .page { display: none; height: calc(100vh - 56px); overflow: hidden; }
-        .page.active { display: block; }
-
         /* 테이블 텍스트 생략 (...) 처리 - 부트스트랩에 없는 기능 */
         #ytTable td { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .selected-row { background-color: #e9ecef !important; font-weight: bold; }
-
-        /* 상세 패널 슬라이드 애니메이션 및 너비 제어 */
-        #detailPanel { transition: width 0.3s ease; width: 0; overflow-x: hidden; background: #fff; z-index: 1000; }
-        #detailPanel.open { width: 450px; border-left: 1px solid #dee2e6; }
-        #detailPanel.expanded { width: 100% !important; }
-
-        /* 썸네일 미리보기 (JavaScript 좌표 계산용) */
-        .thumb-preview { position: fixed; z-index: 9999; pointer-events: none; display: none; max-width: 320px; border: 2px solid #fff; }
     </style>
 </head>
-<body>
+<body class="d-flex flex-column" style="height: 100vh; width: 100vw; overflow: hidden; background-color: #f1f3f5;">
 
     <div class="modal fade" id="loginModal" data-bs-backdrop="static" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg">
                 <div class="modal-body p-5 text-center">
-                    <h3 class="fw-bold mb-3">Trim - YouTube Analyzer</h3>
-                    <p class="text-muted mb-4">심층 분석 기능을 이용하시려면<br>구글 로그인이 필요합니다.</p>
+                    <h3 class="fw-bold mb-3">트림픽 - 유튜브 필터 분석</h3>
+                    <p class="text-muted mb-4">분석 기능을 이용하시려면<br>구글 로그인이 필요합니다.</p>
                     <div class="d-grid">
                         <button class="btn btn-dark btn-lg py-3 shadow-sm" onclick="login()">
                             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" class="me-2"> 구글로 시작하기
@@ -44,26 +31,38 @@
         </div>
     </div>
 
-    <img id="hoverPreview" class="thumb-preview rounded shadow" src="">
+    <img id="hoverPreview" 
+     class="thumb-preview rounded shadow" 
+     src="" 
+     style="position: fixed; z-index: 9999; pointer-events: none; display: none; max-width: 320px; border: 2px solid #fff;">
 
-    <nav class="navbar navbar-expand-lg py-1 shadow-sm">
+    <nav class="navbar navbar-expand-lg py-1 shadow-sm navbar-dark bg-dark">
         <div class="container-fluid">
             <div class="d-flex align-items-center">
-                <a class="navbar-brand fw-bold me-2" href="#" onclick="showPage('analyzerPage')">TRIM</a>
+                <a class="navbar-brand fw-bold me-2 text-white" href="https://www.trimpick.com" onclick="showPage('analyzerPage')">TRIM PICK</a>
                 <div id="adminBtnArea"></div>
             </div>
             
             <div id="navControls" class="d-flex align-items-center gap-2 flex-grow-1">
                 <div class="me-auto"></div> 
                 
-                <div id="guestControls">
+                <div id="guestControls" class="d-none"> 
                     <button class="btn btn-warning btn-sm px-3 fw-bold shadow-sm" onclick="new bootstrap.Modal(document.getElementById('loginModal')).show()">
                         🚀 무료로 이용하기
                     </button>
                 </div>
 
+                <span class="badge bg-dark d-none" style="font-size: 0.8rem; padding: 8px 12px;">
+                    오늘 API 잔여 할당량: <span id="quotaUsage">10,000</span> / 10,000
+                </span>
+
                 <div id="userControls" class="dropdown d-none">
-                    <img id="userAvatar" class="avatar-btn dropdown-toggle" data-bs-toggle="dropdown" src="">
+                    <img id="userAvatar" 
+                        class="avatar-btn dropdown-toggle rounded-circle" 
+                        data-bs-toggle="dropdown" 
+                        src="" 
+                        style="width: 40px; height: 40px; object-fit: cover; cursor: pointer;">
+                    
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0" id="userMenu">
                         <li><h6 class="dropdown-header" id="userEmailDisplay">이메일</h6></li>
                         <li><hr class="dropdown-divider"></li>
@@ -75,12 +74,20 @@
         </div>
     </nav>
 
-    <div id="analyzerPage" class="page active">
+    <div id="analyzerPage" class="page active flex-grow-1 d-flex flex-column" style="display: block; overflow: hidden;">
         <div class="filter-bar p-2 px-3 d-flex align-items-center gap-3 flex-wrap">
+            <div class="align-self-end">
+                <label class="search-label d-block" style="height: 18px;"></label> <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetToCustomDefaults()" 
+                    style="font-size: 11px; height: 31px; padding: 0 10px; display: flex; align-items: center;">
+                    기본값
+                </button>
+            </div>
+
             <div>
                 <label class="search-label">MIN VIEWS</label>
                 <input type="number" id="minViews" class="form-control form-control-sm fw-bold text-center" style="width:90px;" value="30000">
             </div>
+
             <div>
                 <label class="search-label">PERIOD</label>
                 <select id="monthsAgo" class="form-select form-select-sm">
@@ -90,6 +97,7 @@
                     <option value="12">1년</option>
                 </select>
             </div>
+
             <div>
                 <label class="search-label">TYPE</label>
                 <select id="videoType" class="form-select form-select-sm" onchange="toggleTypeDetail()">
@@ -98,6 +106,7 @@
                     <option value="short_form">쇼츠</option>
                 </select>
             </div>
+
             <div id="typeDetailContainer">
                 <label class="search-label">MAX DURATION (분 이하)</label>
                 <div class="input-group input-group-sm">
@@ -105,12 +114,20 @@
                     <span class="input-group-text">분 이하</span>
                 </div>
             </div>
-            <div class="align-self-end">
-                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetToCustomDefaults()" style="font-size: 10px; padding: 2px 8px;">기본값</button>
+            
+
+            <div class="ms-auto mt-2 text-muted" style="font-size: 0.75rem;">
+                * 분석 완료가 0건으로 뜰 경우 API 할당량 소진일 수 있습니다. (구글 정책에 따라 24시간 후 초기화)
             </div>
-            <div class="ms-auto d-flex align-items-center gap-2">
-                <input type="text" id="query" class="form-control form-control-sm bg-light" placeholder="검색어 입력" style="width: 200px;">
-                <button id="searchBtn" class="btn btn-dark btn-sm px-4 fw-bold">분석 시작</button>
+            <div class="d-flex align-items-center gap-2 align-self-end">
+                <div class="d-flex flex-column">
+                    <label class="search-label" style="height: 18px;"></label> <div class="d-flex gap-2">
+                        <input type="text" id="query" class="form-control form-control-sm bg-light" 
+                            placeholder="검색어 입력" style="width: 200px;"
+                            onkeyup="if(window.event.keyCode==13){document.getElementById('searchBtn').click()}">
+                        <button id="searchBtn" class="btn btn-dark btn-sm px-4 fw-bold" style="height: 31px;">분석 시작</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -118,31 +135,55 @@
             <div class="flex-grow-1 overflow-auto p-3">
                 <table id="ytTable" class="table table-hover table-sm align-middle w-100">
                     <thead class="table-light">
-                        <tr>
+                        <tr style="white-space: nowrap;">
                             <th>#</th><th>썸네일</th><th>영상제목</th><th>날짜</th><th>시간</th><th class="text-end">조회수</th><th class="text-end">좋아요</th><th class="text-end">댓글</th><th>카테고리</th><th>채널명</th><th class="text-end">구독자</th><th>태그</th><th>설명</th><th>링크</th><th>길이</th>
                         </tr>
                     </thead>
                     <tbody id="resultBody"></tbody>
+                    <template id="rowTemplate">
+                        <tr>
+                            <td class="row-idx"></td>
+                            <td class="row-thumb"></td>
+                            <td class="row-title" style="font-weight: bold; color: #333;"></td>
+                            <td class="row-date"></td>
+                            <td class="row-time"></td>
+                            <td class="row-views" style="text-align: right; color: #0d6efd; font-weight: bold;"></td>
+                            <td class="row-likes" style="text-align: right;"></td>
+                            <td class="row-comments" style="text-align: right;"></td>
+                            <td class="row-category"></td>
+                            <td class="row-channel"></td>
+                            <td class="row-subs" style="text-align: right;"></td>
+                            <td class="row-tags">
+                                <button class="tag-btn" style="cursor: pointer; background: #212529; color: white; border: none; border-radius: 4px; padding: 2px 10px; font-weight: bold;"></button>
+                            </td>
+                            <td class="row-desc"></td>
+                            <td class="row-link"></td>
+                            <td class="row-duration"></td>
+                        </tr>
+                    </template>
                 </table>
                 <div id="status" class="py-3 text-center text-muted">검색어를 입력하고 분석을 시작하세요.</div>
             </div>
 
-            <div id="detailPanel" class="shadow-lg d-flex flex-column">
-                <div class="p-4 w-100 d-flex flex-column h-100" style="overflow-y: auto;">
-                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                        <h5 class="fw-bold mb-0">Video Details</h5>
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-outline-dark" onclick="toggleExpand()" id="expBtn">전체화면</button>
-                            <button class="btn-close ms-2" onclick="closeDetail()"></button>
+            <div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content border-0 shadow-lg">
+                        <div class="modal-header border-bottom">
+                            <h5 class="modal-title fw-bold" id="detailModalLabel">Video Details</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4" id="detailContent">
+                            </div>
+                        <div class="modal-footer border-top">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
                         </div>
                     </div>
-                    <div id="detailContent"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="profilePage" class="page container mt-5" style="max-width: 600px;">
+    <div id="profilePage" class="page mt-5 mx-auto" style="display: none; max-width: 400px; width: 90%;">
         <div class="card shadow-sm border-0 p-4">
             <h4 class="fw-bold mb-4">내 계정 관리</h4>
             <div class="mb-4">
@@ -156,7 +197,7 @@
                 <label class="form-label fw-bold">YouTube Data API Key</label>
                 <div class="input-group mb-2">
                     <input type="password" id="userApiKey" class="form-control" placeholder="API 키를 입력하세요">
-                    <button class="btn btn-outline-dark" onclick="window.open('https://console.cloud.google.com/apis/credentials')">키 발급소</button>
+                    <button class="btn btn-outline-primary fw-bold" onclick="openGuide()">🔑</button>
                 </div>
                 <div id="apiKeyStatus" class="form-text text-danger">⚠️ 분석 기능을 사용하려면 키가 필요합니다.</div>
             </div>
@@ -166,7 +207,7 @@
         </div>
     </div>
 
-    <div id="adminPage" class="container mt-4 page overflow-auto">
+    <div id="adminPage" class="container mt-4 page" style="display: none !important; overflow: auto;">
     <div class="row mb-4 text-center">
         <div class="col-md-3 mb-3">
             <div class="card border-0 shadow-sm py-3 bg-primary text-white">
@@ -241,7 +282,24 @@
     </div>
 </div>
 
-    <div class="modal fade" id="tagModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">태그</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><textarea id="tagArea" class="form-control" rows="10" readonly></textarea></div></div></div></div>
+    <div class="modal fade" id="tagModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">추출된 태그</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <textarea id="tagArea" class="form-control mb-3 bg-light border-0" rows="10" readonly style="font-size: 14px; resize: none;"></textarea>
+                    
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-dark flex-grow-1 py-2 fw-bold" onclick="copyTags('normal')">📋 일반 복사</button>
+                        <button class="btn btn-outline-dark flex-grow-1 py-2 fw-bold" onclick="copyTags('hashtag')">#️⃣ 해시태그 복사</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="modal fade" id="surveyModal" data-bs-backdrop="static" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -254,6 +312,107 @@
                         <button class="btn btn-outline-dark py-3" onclick="submitSurvey('지인 추천')">지인 추천</button>
                         <button class="btn btn-outline-dark py-3" onclick="submitSurvey('기타', event)">기타 (직접 입력)</button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="guideModal" tabindex="-1" aria-labelledby="guideModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title fw-bold text-primary" id="guideModalLabel">🚀 YouTube API 키 발급 상세 가이드</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 p-md-5">
+                    <p class="text-muted small mb-4">본 서비스의 유튜브 분석 기능을 이용하시려면 아래 단계를 따라 API 키를 발급받아 등록해 주세요.</p>
+
+                    <div class="mb-5 p-4 rounded" style="background-color: #f8f9ff; border: 1px solid #e0e7ff;">
+                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-question-circle-fill me-2"></i>왜 API 키가 무조건 있어야 하나요?</h6>
+                        <div class="d-flex flex-column gap-3">
+                            <div class="d-flex align-items-start">
+                                <span class="me-3">🔑</span>
+                                <div>
+                                    <div class="fw-bold small">개인 신분증</div>
+                                    <div class="text-muted" style="font-size: 0.8rem;">유튜브 도서관을 이용하기 위한 전용 출입증입니다.</div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-start border-top pt-2">
+                                <span class="me-3">📊</span>
+                                <div>
+                                    <div class="fw-bold small">사용량 관리</div>
+                                    <div class="text-muted" style="font-size: 0.8rem;">무분별한 데이터 요청을 막아 서버를 안전하게 보호합니다.</div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-start border-top pt-2">
+                                <span class="me-3">⚖️</span>
+                                <div>
+                                    <div class="fw-bold small">할당량 준수</div>
+                                    <div class="text-muted" style="font-size: 0.8rem;">구글이 부여한 일일 무료 검색 점수를 개별적으로 사용합니다.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-5">
+                        <h6 class="fw-bold text-dark"><span class="badge bg-primary me-2">Step 1</span> 구글 클라우드 콘솔 접속</h6>
+                        <p class="small text-muted mb-2">
+                            1. 구글 검색창에 <b>"YouTube Data API v3"</b>를 검색합니다.<br>
+                            2. 검색 결과 중 <b>Google Cloud Console</b> 사이트(console.cloud.google.com)로 표시된 항목을 클릭하여 접속합니다.<br>
+                            3. 구글 계정으로 로그인합니다. (프로젝트가 없다면 안내에 따라 간단히 생성하세요.)
+                        </p>
+                    </div>
+
+                    <div class="mb-5">
+                        <h6 class="fw-bold text-dark"><span class="badge bg-primary me-2">Step 2</span> API 서비스 활성화</h6>
+                        <p class="small text-muted mb-2">
+                            1. 콘솔 화면 오른쪽 상단의 <b>돋보기 모양(검색창)</b>을 클릭합니다.<br>
+                            2. <b>'YouTube Data API v3'</b>를 입력하고 검색 결과에 나타나는 해당 API를 클릭합니다.<br>
+                            3. 화면 중앙의 파란색 <b>[사용] (Enable)</b> 버튼을 클릭합니다.
+                        </p>
+                    </div>
+
+                    <div class="mb-5">
+                        <h6 class="fw-bold text-dark"><span class="badge bg-primary me-2">Step 3</span> API 키 생성 시작</h6>
+                        <p class="small text-muted mb-2">
+                            1. API가 활성화되면 왼쪽 메뉴 탭에서 <b>[사용자 인증 정보]</b> (Credentials) 메뉴를 클릭합니다.<br>
+                            2. 화면 상단에 있는 <b>[+ 사용자 인증 정보 만들기]</b> 버튼을 누릅니다.<br>
+                            3. 나타나는 옵션 중 <b>[API 키]</b>를 선택합니다.
+                        </p>
+                    </div>
+
+                    <div class="mb-5">
+                        <h6 class="fw-bold text-dark"><span class="badge bg-primary me-2">Step 4</span> API 키 상세 설정 (보안 및 제한)</h6>
+                        <p class="small mb-2 text-danger font-monospace" style="font-size: 0.8rem;">※ 이 단계는 API 키의 안전한 사용을 위해 매우 중요합니다.</p>
+                        <p class="small text-muted mb-2">
+                            1. <b>API 키 이름</b>: 본인이 알아보기 쉬운 이름(예: "My Youtube Analyzer")을 입력합니다.<br>
+                            2. <b>API 제한사항 설정</b>: 화면 아래쪽의 [API 제한사항] 섹션에서 <b>[키 제한] (Restrict key)</b> 항목을 선택합니다.<br>
+                            3. <b>API 선택</b>: Select APIs 드롭다운 메뉴를 누릅니다.<br>
+                            4. 목록을 맨 아래로 내려 <b>[YouTube Data API v3]</b>를 찾아 체크한 후 [확인]을 누릅니다.<br>
+                            5. 모든 설정을 확인했다면 하단의 <b>[만들기] (또는 저장)</b> 버튼을 클릭합니다.
+                        </p>
+                    </div>
+
+                    <div class="mb-5">
+                        <h6 class="fw-bold text-dark"><span class="badge bg-primary me-2">Step 5</span> 키 복사 및 서비스 등록</h6>
+                        <p class="small text-muted mb-2">
+                            1. 화면에 표시된 <b>생성된 API 키</b>를 복사합니다.<br>
+                            2. 만약을 위해 복사한 키를 메모장에 따로 저장해둡니다.<br>
+                            3. 우리 앱의 <b>[내 계정 관리]</b> 또는 <b>[프로필 페이지]</b>로 이동하여 API 키 입력란에 붙여넣고 <b>[저장]</b> 버튼을 누르세요!
+                        </p>
+                    </div>
+
+                    <div class="bg-light p-3 rounded border">
+                        <h6 class="fw-bold mb-3 small">💡 반드시 확인하세요! (주의사항)</h6>
+                        <ul class="list-unstyled mb-0" style="font-size: 0.85rem;">
+                            <li class="mb-2">📅 <b>일일 할당량</b>: 구글은 기본적으로 하루에 10,000 유닛의 무료 할당량을 제공합니다.</li>
+                            <li class="mb-2">🔒 <b>보안 주의</b>: 발급받은 API 키는 사용자의 고유한 자산입니다. 타인에게 공유하지 마세요.</li>
+                            <li>✅ <b>키 제한 권장</b>: Step 4에서 설명한 것처럼 반드시 API를 제한해야 키 도용을 방지할 수 있습니다.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer border-top shadow-sm">
+                    <button type="button" class="btn btn-dark w-100 py-2 fw-bold" data-bs-dismiss="modal">확인했습니다</button>
                 </div>
             </div>
         </div>
@@ -285,6 +444,33 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
+        let totalQuotaUsed = parseInt(localStorage.getItem('youtube_quota_usage') || '0');
+        const lastDate = localStorage.getItem('quota_date');
+        const todayDate = new Date().toLocaleDateString();
+
+        if (lastDate !== todayDate) {
+            totalQuotaUsed = 0;
+            localStorage.setItem('youtube_quota_usage', '0');
+            localStorage.setItem('quota_date', todayDate);
+        }
+
+        function updateQuota(amount) {
+            if (!currentUser) return; // 로그인 안 되어 있으면 기록 안 함
+
+            // 장부 이름을 계정별로 다르게 설정 (예: youtube_quota_abc123)
+            const quotaKey = `youtube_quota_${currentUser.uid}`;
+            
+            totalQuotaUsed += amount;
+            localStorage.setItem(quotaKey, totalQuotaUsed);
+            
+            const display = document.getElementById('quotaUsage');
+            if (display) {
+                let remaining = 10000 - totalQuotaUsed;
+                if (remaining < 0) remaining = 0;
+                display.textContent = remaining.toLocaleString();
+            }
+        }
+
         let dataTable, currentUser, savedApiKey = "";
         const CATEGORY_MAP = {'1':'영화/애니','2':'자동차','10':'음악','15':'동물','17':'스포츠','19':'여행','20':'게임','22':'일상','23':'코미디','24':'엔터','25':'뉴스','26':'노하우','27':'교육','28':'과학','29':'사회'};
 
@@ -293,12 +479,31 @@
 
         // [수정] 페이지 전환 함수 보강
         window.showPage = (id, saveHistory = true) => {
-            $('.page').hide().removeClass('active'); 
-            $('#' + id).show().addClass('active');
+            // 1. 모든 페이지를 찾아서 보이지 않게 하고 부트스트랩의 flex 클래스를 제거합니다.
+            $('.page').each(function() {
+                // style 속성에 display: none !important를 주어 부트스트랩 d-flex 클래스보다 우선순위를 높입니다.
+                $(this).attr('style', 'display: none !important'); 
+                $(this).removeClass('d-flex flex-column active');
+            });
 
-            if(id === 'analyzerPage') {
-                window.closeDetail();
-                if (dataTable) dataTable.columns.adjust();
+            // 2. 선택한 페이지만 다시 보여줍니다.
+            const target = $('#' + id);
+            if (id === 'analyzerPage') {
+                // 분석 페이지는 내부 레이아웃을 위해 flex가 필요합니다. (기존 d-flex 유지)
+                target.attr('style', 'display: flex !important');
+                target.addClass('d-flex flex-column active');
+            } else {
+                // 관리자/프로필 페이지는 일반 블록 형태로 보여줍니다.
+                target.attr('style', 'display: block !important');
+                target.addClass('active');
+            }
+
+            // 데이터테이블 정렬 보정
+            if(id === 'analyzerPage' && dataTable) {
+                if (typeof window.closeDetail === "function") {
+                    window.closeDetail();
+                }
+                setTimeout(() => dataTable.columns.adjust(), 100);
             }
 
             if (saveHistory) {
@@ -511,20 +716,52 @@
 
         // [수정] 인증 상태 변경 로직 - 일반 유저 튕김 방지 버전
         onAuthStateChanged(auth, async (user) => {
-            // [수정] 로그인 여부와 관계없이 가림막은 일단 숨겨서 메인 화면이 보이게 합니다.
+            // [수정] 모든 컨트롤을 일단 숨기고 시작 (깜빡임 방지 및 상태 동기화)
             $('#loginOverlay').hide();
+            $('#guestControls').addClass('d-none').hide();
+            $('#userControls').addClass('d-none').hide();
+
+            // 할당량 표시 요소 찾기
+            const display = document.getElementById('quotaUsage');
+            const quotaBadge = display ? display.closest('.badge') : null;
 
             if (user) {
                 currentUser = user;
                 const hash = location.hash.replace('#', '');
                 
-                // 1. 유저 정보 확인 (일반 유저도 자기 데이터는 읽을 수 있음)
+                // [추가] 로그인 성공 상태라면, 혹시 열려있을지 모를 로그인 모달을 강제로 닫음
+                const loginM = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+                if(loginM) loginM.hide();
+
+                // --- [할당량 관리 로직 추가 시작] ---
+                const quotaKey = `youtube_quota_${user.uid}`;
+                const todayDate = new Date().toLocaleDateString();
+                const lastDate = localStorage.getItem(`quota_date_${user.uid}`);
+
+                // 날짜가 바뀌었으면 해당 유저의 할당량 초기화
+                if (lastDate !== todayDate) {
+                    localStorage.setItem(quotaKey, '0');
+                    localStorage.setItem(`quota_date_${user.uid}`, todayDate);
+                    totalQuotaUsed = 0;
+                } else {
+                    totalQuotaUsed = parseInt(localStorage.getItem(quotaKey) || '0');
+                }
+
+                // UI 배지 보이기 및 숫자 업데이트
+                if (quotaBadge) quotaBadge.classList.remove('d-none');
+                if (display) {
+                    let remaining = 10000 - totalQuotaUsed;
+                    display.textContent = (remaining < 0 ? 0 : remaining).toLocaleString();
+                }
+                // --- [할당량 관리 로직 추가 끝] ---
+
+                // 1. 유저 정보 확인 (기존 로직 유지)
                 const userDoc = await getDoc(doc(db, "users", user.uid));
 
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
                     
-                    // 1. 탈퇴 유저 처리 (복구 제안)
+                    // 탈퇴 유저 처리 로직
                     if (userData.status === "withdrawn") {
                         if (confirm("이전에 탈퇴하신 계정입니다. 계정을 복구하시겠습니까?")) {
                             await updateDoc(doc(db, "users", user.uid), { 
@@ -542,19 +779,19 @@
                         }
                     }
 
-                    // 2. 기존 유저 정보 로드
+                    // 기존 유저 정보 로드 로직
                     savedApiKey = userData.apiKey || "";
                     $('#userApiKey').val(savedApiKey);
                     if(savedApiKey) $('#apiKeyStatus').html("<span class='text-success'>✅ API 키 등록됨</span>");
                     
                 } else {
-                    // 신규 유저: 설문 모달 띄우기
+                    // 신규 유저: 설문 모달 띄우기 로직
                     if (hash !== 'profilePage') {
                         new bootstrap.Modal(document.getElementById('surveyModal')).show();
                     }
                 }
 
-                // 2. 관리자 체크
+                // 2. 관리자 체크 로직
                 let isAdmin = false;
                 try {
                     const adminDoc = await getDoc(doc(db, "admins", user.email.toLowerCase()));
@@ -569,21 +806,16 @@
                     console.log("관리자 권한 없음 (일반 유저 로그인)");
                 }
 
-                // 3. UI 표시
-                // [추가] 로그인 성공 시: '무료이용' 버튼 숨기고 '프로필' 보여주기
-                $('#guestControls').addClass('d-none');
-                $('#userControls').removeClass('d-none');
-
-                // [추가] 로그인 유도 모달이 열려있다면 닫습니다.
-                const loginM = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
-                if(loginM) loginM.hide();
-
+                // 3. UI 표시 (로그인 성공 시 UI 동기화)
+                $('#guestControls').addClass('d-none').hide(); // '무료이용' 숨김
+                $('#userControls').removeClass('d-none').show(); // '프로필' 노출
                 $('#navControls').removeClass('d-none');
+                
                 $('#userAvatar').attr('src', user.photoURL);
                 $('#userEmailDisplay').text(user.email);
                 $('#profileEmail').val(user.email);
 
-                // 페이지 결정
+                // 페이지 이동 결정 로직
                 if (hash === 'profilePage') {
                     window.showPage('profilePage', false);
                 } else if (hash === 'adminPage' && isAdmin) {
@@ -592,15 +824,33 @@
                     window.showPage('analyzerPage', false);
                 }
             } else {
-                // [추가] 로그아웃 상태일 때 처리
+                // 4. 로그아웃 상태일 때 처리
                 currentUser = null;
-                // [추가] 로그아웃 시: '무료이용' 버튼 보여주고 '프로필' 숨기기
-                $('#guestControls').removeClass('d-none');
-                $('#userControls').addClass('d-none');
+                totalQuotaUsed = 0; // 초기화
+
+                // [추가] 로그아웃 시 할당량 배지 숨기기
+                if (quotaBadge) quotaBadge.classList.add('d-none');
+
+                $('#userControls').addClass('d-none').hide(); // '프로필' 숨김
+                $('#guestControls').removeClass('d-none').show(); // '무료이용' 노출
+                $('#navControls').removeClass('d-none'); 
                 
-                $('#navControls').removeClass('d-none'); // 버튼은 보여야 하므로 d-none 제거
+                // 로그아웃 상태에서 권한 페이지 접속 시 튕겨내기
+                const hash = location.hash.replace('#', '');
+                if (hash === 'adminPage' || hash === 'profilePage') {
+                    window.showPage('analyzerPage', false);
+                }
             }
         });
+        // 🔤 검색어 언어 감지
+        function detectLanguage(text) {
+            if (/[가-힣]/.test(text)) return 'ko';
+            if (/[ぁ-ゔァ-ヴー々〆〤]/.test(text)) return 'ja';
+            if (/[a-zA-Z]/.test(text)) return 'en';
+            return 'other';
+        }
+
+
 
         // 분석 로직 및 나머지 유틸리티 함수 (기존과 동일)
         $('#searchBtn').click(async function() {// 1. 로그인 여부 체크
@@ -617,6 +867,32 @@
             if (!savedApiKey) { alert("API KEY 등록 필요"); return window.showPage('profilePage'); }
             const queryText = $('#query').val();
             if (!queryText) return;
+
+            // 🌍 검색어 언어 기반 검색 전략 결정
+            const lang = detectLanguage(queryText);
+
+            let regionParam = '';
+            let relevanceLangParam = '';
+            let orderParam = ''; // 🔥 정렬 방식 분리
+
+            if (lang === 'ko') {
+                orderParam = '&order=viewCount'; // 한국어만 조회수 기준
+            }
+
+            // 🇰🇷 한국어만 한국 기준
+            if (lang === 'ko') {
+                regionParam = '&regionCode=KR';
+                relevanceLangParam = '&relevanceLanguage=ko';
+            }
+            // 🇯🇵 일본어
+            else if (lang === 'ja') {
+                relevanceLangParam = '&relevanceLanguage=ja';
+            }
+            // 🇺🇸 영어
+            else if (lang === 'en') {
+                relevanceLangParam = '&relevanceLanguage=en';
+            }
+            // 기타 언어 → 글로벌 (아무것도 안 붙임)
             
             try { await addDoc(collection(db, "searchLogs"), { user: currentUser.email, keyword: queryText, time: serverTimestamp() }); } catch(e) {}
             
@@ -624,6 +900,9 @@
             dataTable.clear().draw();
 
             try {
+                const TARGET_COUNT = 30;        // 최종 목표 개수
+                const MAX_SEARCH_PAGES = 15;   // 안정화용 최대 탐색 페이지
+
                 const minV = parseInt($('#minViews').val()) || 0;
                 const typeFilter = $('#videoType').val();
                 const durMax = parseInt($('#durationMax').val()) || 20;
@@ -634,41 +913,196 @@
                     dateParam = `&publishedAfter=${date.toISOString()}`;
                 }
 
-                let results = [];
+                let results = [];                
                 let nextToken = '';
-                for(let i=0; i<5; i++){
-                    const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(queryText)}&type=video${dateParam}${nextToken ? '&pageToken='+nextToken : ''}&maxResults=50&order=viewCount&regionCode=KR&key=${savedApiKey}`);
+                const seenVideoIds = new Set();
+                let searchPageCount = 0;
+                while (
+                    results.length < TARGET_COUNT &&
+                    searchPageCount < MAX_SEARCH_PAGES
+                ){ 
+                    searchPageCount++;
+                    updateQuota(100);
+                    const res = await fetch(
+                    `https://www.googleapis.com/youtube/v3/search` +
+                    `?part=snippet` +
+                    `&type=video` +
+                    `&q=${encodeURIComponent(queryText)}` +
+                    `${dateParam}` +
+                    `${nextToken ? '&pageToken=' + nextToken : ''}` +
+                    `${regionParam}` +
+                    `${relevanceLangParam}` +
+                    `${orderParam}` +
+                    `&maxResults=50` +
+                    `&key=${savedApiKey}`
+                );
+
                     const data = await res.json();
-                    if(!data.items) break;
 
-                    const vIds = data.items.map(v => v.id.videoId).join(',');
-                    const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${vIds}&key=${savedApiKey}`);
+                    if (!data.items || data.items.length === 0) {
+                        if (!data.nextPageToken) break; // 🔥 무한/헛페이지 방지
+                        nextToken = data.nextPageToken;
+                        continue;
+                    }
+
+                    const vIds = data.items
+                        .map(v => typeof v.id === 'string' ? v.id : v.id?.videoId)
+                        .filter(Boolean)
+                        .join(',');
+
+                    if (!vIds) {
+                        nextToken = data.nextPageToken;
+                        continue;
+                    }
+
+                    updateQuota(1);
+                    const vRes = await fetch(
+                    `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${vIds}&key=${savedApiKey}`
+                    );
                     const vData = await vRes.json();
-                    
-                    const cIds = [...new Set(vData.items.map(v => v.snippet.channelId))].join(',');
-                    const cRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${cIds}&key=${savedApiKey}`);
-                    const cData = await cRes.json();
-                    const cMap = {}; cData.items.forEach(c => cMap[c.id] = c.statistics.subscriberCount);
 
-                    vData.items.forEach(v => {
-                        const views = parseInt(v.statistics.viewCount);
+                    // ✅ [2] videos 결과 방어 (여기!)
+                    if (!vData.items || vData.items.length === 0) {
+                        nextToken = data.nextPageToken;
+                        continue; // 👉 search 다음 페이지로
+                    }
+                                        
+                    const cIds = [...new Set(vData.items.map(v => v.snippet.channelId))].join(',');
+                    updateQuota(1);
+                    const cRes = await fetch(
+                    `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${cIds}&key=${savedApiKey}`
+                    );
+
+                    const cData = await cRes.json();
+                    const cMap = {};
+
+                    // ✅ [3] channels 결과 방어 (여기!)
+                    if (cData.items && cData.items.length > 0) {
+                        cData.items.forEach(c => {
+                            cMap[c.id] = c.statistics?.subscriberCount || null;
+                        });
+                    }
+                    for (const v of vData.items) {
+
+                        // ✅ videoId 안정화 (중복/누락 방지 핵심)
+                        const videoId =
+                            typeof v.id === 'string'
+                                ? v.id
+                                : v.id?.videoId;
+
+                        if (!videoId) continue;
+
+                        // 🔥 중복 제거 최우선
+                        if (seenVideoIds.has(videoId)) continue;
+                        seenVideoIds.add(videoId);
+
+                        // === statistics 방어 ===
+                        const views = parseInt(v.statistics?.viewCount || 0);
+                        if (!v.contentDetails?.duration) continue;
+
                         const sec = parseDurationToSec(v.contentDetails.duration);
+
                         let pass = (views >= minV);
-                        if(typeFilter === 'long_form') pass = pass && (sec >= 180 && sec <= durMax*60);
-                        if(typeFilter === 'short_form') pass = pass && (sec < 60);
-                        if(pass && results.length < 30) {
-                            const s = v.snippet; const t = v.statistics;
-                            const hr = s.thumbnails.maxres ? s.thumbnails.maxres.url : s.thumbnails.medium.url;
-                            results.push([ results.length+1, `<img src="${s.thumbnails.default.url}" data-highres="${hr}" class="thumb-img rounded" style="width:50px;">`, s.title, new Date(s.publishedAt).toLocaleDateString(), new Date(s.publishedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), views.toLocaleString(), parseInt(t.likeCount||0).toLocaleString(), parseInt(t.commentCount||0).toLocaleString(), CATEGORY_MAP[s.categoryId]||'기타', s.channelTitle, cMap[s.channelId]?parseInt(cMap[s.channelId]).toLocaleString():'비공개', `<span class="tag-badge" onclick="openTagModal('${s.tags?.join(',') || ''}')">태그</span>`, s.description, `<a href="https://youtu.be/${v.id}" target="_blank">Link</a>`, formatDuration(v.contentDetails.duration) ]);
-                        }
-                    });
+                        if (typeFilter === 'long_form') pass = pass && (sec >= 180 && sec <= durMax * 60);
+                        if (typeFilter === 'short_form') pass = pass && (sec < 60);
+
+                        if (!pass) continue;
+
+                        // 🔥 여기서 진짜 루프 종료
+                        if (results.length >= TARGET_COUNT) break;
+
+                        if (!v.snippet) continue;
+                        const s = v.snippet;
+
+                        const hr =
+                            s.thumbnails?.maxres?.url ||
+                            s.thumbnails?.high?.url ||
+                            s.thumbnails?.medium?.url ||
+                            s.thumbnails?.default?.url ||
+                            '';
+
+                        const thumb =
+                            s.thumbnails?.default?.url ||
+                            s.thumbnails?.medium?.url ||
+                            '';
+
+                        const temp = document.querySelector('#rowTemplate');
+                        const clone = document.importNode(temp.content, true);
+
+                        clone.querySelector('.row-thumb').innerHTML =
+                            `<img src="${thumb}" data-highres="${hr}" class="thumb-img rounded" style="width:50px;">`;
+
+                        clone.querySelector('.row-title').textContent = s.title || '';
+                        clone.querySelector('.row-date').textContent =
+                            s.publishedAt ? new Date(s.publishedAt).toLocaleDateString() : '';
+                        clone.querySelector('.row-time').textContent =
+                            s.publishedAt ? new Date(s.publishedAt).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : '';
+
+                        clone.querySelector('.row-views').textContent = views.toLocaleString();
+                        clone.querySelector('.row-likes').textContent = parseInt(v.statistics?.likeCount || 0).toLocaleString();
+                        clone.querySelector('.row-comments').textContent = parseInt(v.statistics?.commentCount || 0).toLocaleString();
+
+                        clone.querySelector('.row-category').textContent = CATEGORY_MAP[s.categoryId] || '기타';
+                        clone.querySelector('.row-channel').textContent = s.channelTitle || '';
+                        clone.querySelector('.row-subs').textContent =
+                            cMap[s.channelId]
+                                ? parseInt(cMap[s.channelId]).toLocaleString()
+                                : '비공개';
+
+                        const tagBtn = clone.querySelector('.tag-btn');
+                        const tags = Array.isArray(s.tags) ? s.tags : [];
+                        tagBtn.textContent = tags.length;
+                        tagBtn.setAttribute(
+                            "onclick",
+                            `openTagModal("${tags.join(',').replace(/"/g, '&quot;')}")`
+                        );
+
+                        clone.querySelector('.row-desc').textContent = s.description || '';
+                        clone.querySelector('.row-link').innerHTML =
+                            `<a href="https://youtu.be/${videoId}" target="_blank">Link</a>`;
+                        clone.querySelector('.row-duration').textContent =
+                            formatDuration(v.contentDetails.duration);
+
+                        const rowData = Array.from(clone.querySelectorAll('td')).map(td => td.innerHTML);
+                        results.push(rowData);
+                    }
+
+
                     nextToken = data.nextPageToken;
-                    if(!nextToken || results.length >= 30) break;
+                    if (!nextToken) break;
                 }
+                // ✅ while 완전히 끝난 뒤에만!
+                if (searchPageCount === MAX_SEARCH_PAGES && results.length < TARGET_COUNT) {
+                    console.warn('조건이 엄격해 결과가 부족함:', results.length);
+                }
+                console.log('results length BEFORE DataTable:', results.length);
+
+                // 테이블에 넣기
+                dataTable.clear();
                 dataTable.rows.add(results).draw();
-                $('#status').text(`분석 완료: ${results.length}건`);
+
+                // ✅ 사용자 상태 메시지
+                $('#status').text(
+                    results.length < TARGET_COUNT
+                        ? `조건이 엄격하여 ${results.length}건만 분석됨`
+                        : `분석 완료: ${results.length}건`
+                );
+
+                console.log('rows in DataTable AFTER draw:', dataTable.rows().count());
             } catch(e) { $('#status').text("오류 발생"); }
         });
+
+        // 가이드 패널 열기
+        window.openGuide = () => {
+            // 기존 가이드 모달 인스턴스 가져오기 또는 생성
+            const guideModal = new bootstrap.Modal(document.getElementById('guideModal'));
+            guideModal.show();
+        };
+
+        // 가이드 패널 닫기
+        window.closeGuide = () => {
+            $('#guidePanel').removeClass('open');
+        };
 
         window.saveUserData = async () => {
             const key = $('#userApiKey').val();
@@ -693,35 +1127,132 @@
             console.log("필터 기본값 적용 완료");
         };
 
-        function parseDurationToSec(d) {
-            const m = d.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-            return (parseInt(m[1])||0)*3600 + (parseInt(m[2])||0)*60 + (parseInt(m[3])||0);
-        }
+function parseDurationToSec(d) {
+    if (!d || typeof d !== 'string') return 0;
 
-        function formatDuration(d) {
-            const m = d.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-            return `${m[1]?m[1]+':':''}${(m[2]||'0').padStart(2,'0')}:${(m[3]||'0').padStart(2,'0')}`;
-        }
+    const m = d.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!m) return 0;
 
+    return (parseInt(m[1]) || 0) * 3600
+         + (parseInt(m[2]) || 0) * 60
+         + (parseInt(m[3]) || 0);
+}
+
+function formatDuration(d) {
+    if (!d || typeof d !== 'string') return '00:00';
+
+    const m = d.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!m) return '00:00';
+
+    const h = m[1] ? m[1] + ':' : '';
+    const min = (m[2] || '0').padStart(2, '0');
+    const sec = (m[3] || '0').padStart(2, '0');
+
+    return `${h}${min}:${sec}`;
+}
+
+        
         window.closeDetail = () => { $('#detailPanel').removeClass('open expanded'); $('#ytTable tbody tr').removeClass('selected-row'); };
         window.toggleExpand = () => { $('#detailPanel').toggleClass('expanded'); $('#expBtn').text($('#detailPanel').hasClass('expanded') ? '축소' : '전체'); };
-        window.openTagModal = (s) => { $('#tagArea').val(s); new bootstrap.Modal(document.getElementById('tagModal')).show(); };
+        // 태그 모달 열기 및 줄바꿈 처리
+        window.openTagModal = (tagString) => {
+            const area = $('#tagArea');
+            if (!tagString || tagString === "" || tagString === "undefined") {
+                area.val("설정된 태그가 없습니다.");
+            } else {
+                // 쉼표로 구분된 태그를 줄바꿈(\n)으로 바꿔서 보여줌
+                area.val(tagString.split(',').join('\n'));
+            }
+            new bootstrap.Modal(document.getElementById('tagModal')).show();
+        };
+
+        // 태그 클립보드 복사 함수
+        window.copyTags = (mode) => {
+            const tagText = $('#tagArea').val();
+            if (tagText === "설정된 태그가 없습니다." || !tagText) return;
+
+            const tags = tagText.split('\n');
+            let finalString = "";
+
+            if (mode === 'normal') {
+                finalString = tags.join(', '); // 일반 복사: 태그1, 태그2
+            } else if (mode === 'hashtag') {
+                finalString = tags.map(t => '#' + t.trim()).join(' '); // 해시태그: #태그1 #태그2
+            }
+
+            navigator.clipboard.writeText(finalString).then(() => {
+                alert("복사되었습니다!");
+            }).catch(err => {
+                alert("복사 실패: " + err);
+            });
+        };
         window.toggleTypeDetail = () => { document.getElementById('typeDetailContainer').style.visibility = ($('#videoType').val() === 'long_form') ? 'visible' : 'hidden'; };
 
         $(document).ready(function() {
-            dataTable = $('#ytTable').DataTable({ paging: true, pageLength: 50, scrollX: true });
-            $(document).on('click', '#ytTable tbody tr', function(e) {
-                if($(e.target).closest('button, a, .tag-badge').length) return;
-                $('#ytTable tbody tr').removeClass('selected-row'); $(this).addClass('selected-row');
-                const rowData = dataTable.row(this).data();
-                if(rowData) {
-                    $('#detailContent').html(`<img src="${$(rowData[1]).data('highres')}" class="img-fluid rounded mb-3"><h5 class="fw-bold">${rowData[2]}</h5><div class="bg-light p-3 small border rounded" style="max-height:300px; overflow-y:auto; white-space:pre-wrap;">${rowData[12]}</div><a href="${$(rowData[13]).attr('href')}" target="_blank" class="btn btn-dark w-100 mt-3">영상 열기</a>`);
-                    $('#detailPanel').addClass('open');
+            // 1. 데이터테이블 초기화
+            dataTable = $('#ytTable').DataTable({
+                paging: true,
+                pageLength: 12,
+                scrollX: true,
+                columnDefs: [
+                    { targets: [5, 6, 7, 10], className: 'text-end' }
+                ],
+                drawCallback: function () {
+                    const api = this.api();
+                    api.rows({ page: 'current' }).every(function (rowIdx) {
+                        const pageInfo = api.page.info();
+                        const number = pageInfo.start + rowIdx + 1;
+                        $(this.node()).find('.row-idx').text(number);
+                    });
                 }
             });
+
+
+            // 2. 테이블 행 클릭 이벤트
+            $(document).on('click', '#ytTable tbody tr', function(e) {
+                if($(e.target).closest('button, a, .tag-badge').length) return;
+                    
+                // 선택된 행 표시 (선택사항)
+                $('#ytTable tbody tr').removeClass('selected-row'); 
+                $(this).addClass('selected-row');
+                
+                const rowData = dataTable.row(this).data();
+                if(rowData) {
+                    // 1. 모달 내부 HTML 채우기
+                    $('#detailContent').html(`
+                        <img src="${$(rowData[1]).data('highres')}" class="img-fluid rounded mb-3 w-100 shadow-sm">
+                        <h4 class="fw-bold mb-3">${rowData[2]}</h4>
+                        <div class="bg-light p-3 small border rounded mb-3" style="max-height:400px; overflow-y:auto; white-space:pre-wrap;">
+                            ${rowData[12]} 
+                        </div>
+                        <a href="${$(rowData[13]).attr('href')}" target="_blank" class="btn btn-dark w-100 py-2 fw-bold">
+                            <i class="bi bi-play-fill"></i> 유튜브에서 영상 열기
+                        </a>
+                    `);
+                    
+                    // 2. 부트스트랩 모달 띄우기
+                    const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+                    detailModal.show();
+                }
+            });
+
+            // 3. 썸네일 미리보기 이벤트
             $(document).on('mouseenter', '.thumb-img', function(e) { $('#hoverPreview').attr('src', $(this).data('highres')).show(); })
             .on('mousemove', '.thumb-img', function(e) { $('#hoverPreview').css({ top: e.clientY + 15, left: e.clientX + 15 }); })
             .on('mouseleave', '.thumb-img', function() { $('#hoverPreview').hide(); });
+
+            // 4. [추가] 엔터 키 검색 이벤트 (ready 안으로 이동)
+            $('#query').on('keypress', function(e) {
+                if (e.which == 13) {
+                    $('#searchBtn').click();
+                }
+            });
+            const display = document.getElementById('quotaUsage');
+            if (display) {
+                let remaining = 10000 - totalQuotaUsed;
+                if (remaining < 0) remaining = 0;
+                display.textContent = remaining.toLocaleString();
+            }
         });
 
         window.onpopstate = function(event) {
