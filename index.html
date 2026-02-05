@@ -932,16 +932,30 @@ function formatDuration(d) {
         window.closeDetail = () => { $('#detailPanel').removeClass('open expanded'); $('#ytTable tbody tr').removeClass('selected-row'); };
         window.toggleExpand = () => { $('#detailPanel').toggleClass('expanded'); $('#expBtn').text($('#detailPanel').hasClass('expanded') ? '축소' : '전체'); };
         // 태그 모달 열기 및 줄바꿈 처리
+        let tagModalInstance = null;
+
         window.openTagModal = (tagString) => {
             const area = $('#tagArea');
+
             if (!tagString || tagString === "" || tagString === "undefined") {
                 area.val("설정된 태그가 없습니다.");
             } else {
-                // 쉼표로 구분된 태그를 줄바꿈(\n)으로 바꿔서 보여줌
                 area.val(tagString.split(',').join('\n'));
             }
-            new bootstrap.Modal(document.getElementById('tagModal')).show();
+
+            const modalEl = document.getElementById('tagModal');
+            if (!tagModalInstance) {
+                tagModalInstance = new bootstrap.Modal(modalEl);
+            }
+            tagModalInstance.show();
         };
+
+        // backdrop 정리 (보험)
+        $('#tagModal').on('hidden.bs.modal', function () {
+            $('body').removeClass('modal-open');
+            $('.modal-backdrop').remove();
+        });
+
 
         // 태그 클립보드 복사 함수
         window.copyTags = (mode) => {
@@ -1170,10 +1184,10 @@ function formatDuration(d) {
                                 tagBtn.textContent = tagCount;
                                 tagBtn.disabled = false;
 
-                                tagBtn.onclick = (e) => {
-                                    e.stopPropagation();
-                                    window.openTagModal(tagString);
-                                };
+                                tagBtn.textContent = tagCount;
+                                tagBtn.disabled = false;
+                                tagBtn.setAttribute('data-tags', tagString);
+                                tagBtn.classList.add('tag-btn');
                             } else {
                                 tagBtn.textContent = '0';
                                 tagBtn.disabled = true;
@@ -1418,6 +1432,13 @@ window.showDesc = (desc) => {
     alert(desc.substring(0, 500) + "...");
 };
 // ---------------------------------------------------------
+
+$(document).on('click', '.tag-btn', function (e) {
+    e.stopPropagation();
+    const tagString = $(this).data('tags');
+    if (!tagString) return;
+    openTagModal(tagString);
+});
     </script>
 </body>
 </html>
